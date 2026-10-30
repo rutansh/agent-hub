@@ -101,7 +101,7 @@ Treat tokens like passwords: use your own, with the fewest scopes needed.
 
 ## Present it
 
-[`docs/presentation.html`](./docs/presentation.html) is a 17-slide deck: the problem, how
+[`docs/presentation.html`](./docs/presentation.html) is an 18-slide deck: the problem, how
 the system is designed, what it does, and best practices for AI systems. Open it in a
 browser. Arrow keys navigate, `F` goes fullscreen, and Print > Save as PDF exports it.
 
