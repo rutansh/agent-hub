@@ -83,6 +83,14 @@ for example `--target claude` or `--target copilot`.
 
 Upgrade: change the ref in `apm.yml`, then `apm install --update`.
 
+If you committed the installed `.agents/` and `.cursor/` folders and are upgrading in a
+fresh clone (or a renamed folder), APM cannot prove it wrote those files and may delete
+changed skills instead of replacing them. Use `apm install --update --force` there, then
+check that `.agents/skills/*/SKILL.md` is still present.
+
+The skills' scripts need Python 3.10 or newer. If your project runs `ruff` over the whole
+repo, exclude the installed folders: `extend-exclude = [".agents", ".cursor", "apm_modules"]`.
+
 ## Needed for the epic workflow
 
 | Tool | Used for | Setup |
