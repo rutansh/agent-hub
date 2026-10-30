@@ -1,0 +1,4 @@
+# Credentials - never commit
+.env
+.env.*
+!.env.example

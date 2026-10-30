@@ -16,7 +16,10 @@ Ask the user, in this order (skip anything already answered):
    - **Small feature**: one repo, a handful of files, fits in one merge request.
    - **Big epic**: needs design decisions, touches several areas, or needs more than
      one merge request.
-3. If epic: **Which Jira project key?** (for example `PAY`) and an existing epic key, if any.
+3. If epic: **Which Jira project key?** (for example `PAY`; default to `JIRA_PROJECT_KEY`
+   from `.env` if set) and an existing epic key, if any.
+4. If epic: run the `connect-tools` skill now, so missing credentials show up before any
+   work starts and not at the last step.
 
 If the user is unsure, recommend based on the repo: if you cannot describe the change
 in about five bullet points, treat it as an epic.

@@ -25,10 +25,15 @@ Run `git remote get-url origin`.
 - Contains `github` -> use **GitHub flow**.
 - Anything else -> ask the user.
 
+## Credentials
+
+Before using `glab` or `gh`, follow the `connect-tools` skill. It loads `GITLAB_TOKEN`
+and `GITLAB_HOST` (or `GH_TOKEN`) from `.env`.
+
 ## GitLab flow (`glab stack`)
 
-Requires `glab` (`brew install glab`, then `glab auth login`). `glab stack` is marked
-experimental by GitLab; tell the user once.
+Requires `glab` (`brew install glab`). `glab stack` is marked experimental by GitLab;
+tell the user once.
 
 ```bash
 # 1. Start from an up-to-date base branch that exists on the remote

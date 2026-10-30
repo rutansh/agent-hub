@@ -42,5 +42,6 @@ and you create the matching Jira tickets. You never change application code.
 
 - Do not start implementing.
 - Do not create Jira tickets before the user approves the plan.
+- Never read, print or commit `.env`. Use the `connect-tools` skill to load credentials.
 - Do not invent scope that the design does not contain. Raise gaps as questions.
 - Return the path of `plan.md` and the list of created ticket keys.

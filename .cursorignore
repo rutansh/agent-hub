@@ -1,0 +1,4 @@
+# Keep credentials out of AI context
+.env
+.env.*
+!.env.example

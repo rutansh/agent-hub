@@ -32,9 +32,10 @@ Creating tickets is visible to the whole team.
 
 ## Step 3 - Create them
 
-Check that the CLI works: `acli --version`. If it is missing or not signed in, tell the
-user to install it and run `acli jira auth login --web`, or use a Jira MCP server if the
-environment has one.
+Follow the `connect-tools` skill first. It loads `JIRA_SITE`, `JIRA_EMAIL` and
+`JIRA_API_TOKEN` from `.env` and signs `acli` in. Use `JIRA_PROJECT_KEY` as the default
+project if the user did not name one. If `acli` is unavailable, the user can instead run
+`acli jira auth login --web`, or you can use a Jira MCP server if the environment has one.
 
 Create the epic first (skip if it exists), then each task under it:
 

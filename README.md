@@ -39,6 +39,7 @@ flowchart TD
 | `implement-feature` | Builds a small feature using the repo's code as context |
 | `jira-tickets` | Creates a Jira epic and child tickets |
 | `stacked-mrs` | Ships work as a stack of small, dependent merge requests |
+| `connect-tools` | Loads credentials from `.env` and checks `gh`, `glab` and `acli` |
 
 ### Pharma skills (domain examples)
 
@@ -77,6 +78,27 @@ Upgrade: change the ref in `apm.yml`, then `apm install --update`.
 If a tool is missing, the agents say so and use a fallback (for example writing tickets
 to a markdown file) instead of failing silently.
 
+## Credentials (`.env`)
+
+Developers put their own credentials in a git-ignored `.env` file. Agents load it through
+the `connect-tools` skill and never print it.
+
+```bash
+cp .env.example .env                     # then fill in only the tools you use
+source .agents/skills/connect-tools/scripts/connect.sh
+```
+
+| Variable | Tool | Where to get it |
+| --- | --- | --- |
+| `GH_TOKEN` | GitHub `gh` | GitHub > Settings > Tokens (scope `repo`) |
+| `GITLAB_TOKEN`, `GITLAB_HOST` | GitLab `glab` | GitLab > Access tokens (scopes `api`, `write_repository`) |
+| `JIRA_SITE`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, `JIRA_PROJECT_KEY` | Jira `acli` | Atlassian account > API tokens |
+
+`apm install` does not copy `.env.example` into your project, so copy it from this repo
+(or let the `connect-tools` skill create `.env` from its bundled template). Each repo also
+ships `.gitignore` and `.cursorignore` entries so `.env` is not committed or sent to the AI.
+Treat tokens like passwords: use your own, with the fewest scopes needed.
+
 ## Contribute
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md). Add a file under `.apm/`, run
@@ -87,6 +109,7 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md). Add a file under `.apm/`, run
 ```
 agent-hub/
   apm.yml
+  .env.example          # credentials template (copy to .env)
   .apm/
     agents/   architect, planner, builder
     skills/   start-task, implement-feature, jira-tickets, stacked-mrs, + pharma skills

@@ -58,6 +58,9 @@ Open a PR to `main`. CI runs the same check.
 
 - No real patient data, credentials or proprietary documents.
 - Every skill and agent states what it must not do.
+- Never commit `.env` or a real token. A new tool that needs credentials gets a variable
+  in `.env.example`, and the same change must be copied to
+  `.apm/skills/connect-tools/env.example` (CI checks they match).
 - Agents hand work to each other through files (for example `docs/epics/<slug>/plan.md`),
   not through chat history.
 

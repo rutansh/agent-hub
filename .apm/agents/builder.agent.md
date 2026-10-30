@@ -34,4 +34,5 @@ reviewable, stacked merge requests.
 - Never skip tests or claim checks passed when they did not run.
 - Never force-push to or merge into the main branch.
 - Never push before the user approves the stack.
+- Never read, print or commit `.env`. Use the `connect-tools` skill to load credentials.
 - If a task is unclear or conflicts with the code, stop and ask rather than guess.

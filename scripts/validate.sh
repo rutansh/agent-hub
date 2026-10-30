@@ -42,4 +42,19 @@ for file in .apm/agents/*.agent.md; do
   check_file "agent:$agent" "$file" "$agent"
 done
 
+# --- Secret safety ---------------------------------------------------------
+# .env must never be tracked
+if git ls-files --error-unmatch .env >/dev/null 2>&1; then
+  echo "FAIL secrets: .env is tracked by git"; status=1
+fi
+# Template must not contain real values for secret variables
+if grep -qE '^(GH_TOKEN|GITLAB_TOKEN|JIRA_API_TOKEN)=.+' .env.example; then
+  echo "FAIL secrets: .env.example has a value for a token variable"; status=1
+fi
+# The copy shipped inside the connect-tools skill must match the root template
+if ! cmp -s .env.example .apm/skills/connect-tools/env.example; then
+  echo "FAIL secrets: .env.example and .apm/skills/connect-tools/env.example differ"; status=1
+fi
+[[ $status -eq 0 ]] && echo "OK   secrets"
+
 exit $status
