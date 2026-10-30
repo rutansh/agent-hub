@@ -1,62 +1,53 @@
 ---
 name: jira-tickets
-description: Create a Jira epic and child tasks from a plan, with clear descriptions and acceptance criteria. Uses the Atlassian CLI (acli) and falls back to a markdown file.
+description: Create a Jira epic and child tasks from plan.md with a script, so tickets are always created the same way. Falls back to a markdown file if Jira is unavailable.
 ---
 
 # Jira Tickets
 
-Turns a task list into Jira work items.
+Turns `docs/epics/<slug>/plan.md` into Jira work items. The `scripts/jira_sync.py` script in
+this skill's folder does the work, so the result does not depend on how you phrase commands:
 
-## Inputs
+`python3 <this-skill-folder>/scripts/jira_sync.py ...` (Python 3.10 or newer, standard
+library only; it calls the Atlassian CLI `acli`).
 
-- The plan file (usually `docs/epics/<slug>/plan.md`) with a list of tasks.
-- Jira project key. Ask the user if it is not provided.
-- Existing epic key, if the epic already exists.
+## What the script guarantees
 
-## Step 1 - Write each ticket
+- The plan is validated first. A broken plan is rejected before anything is created.
+- Creation is refused without `--confirm`.
+- The epic is created first, then each task under it with `--parent`, in plan order.
+- Each Jira key is written back to `plan.md` right after its ticket is created, so a failed
+  run resumes where it stopped and never creates duplicates.
+- Ticket descriptions are generated from the plan (goal, likely files, acceptance criteria,
+  dependencies) and saved to `docs/epics/<slug>/tickets/<id>.md`.
 
-Every ticket needs:
+## Steps
 
-- **Summary**: imperative, under 80 characters ("Add notification preferences API").
-- **Description**: what and why, in two to five sentences.
-- **Acceptance criteria**: a checklist a reviewer can verify.
-- **Dependencies**: the tickets that must land first.
-
-Save each description as a file (for example `docs/epics/<slug>/tickets/T1.md`) so it can
-be passed with `--description-file`.
-
-## Step 2 - Confirm before creating
-
-Show the user the full list (summaries, order, dependencies) and wait for approval.
-Creating tickets is visible to the whole team.
-
-## Step 3 - Create them
-
-Follow the `connect-tools` skill first. It loads `JIRA_SITE`, `JIRA_EMAIL` and
-`JIRA_API_TOKEN` from `.env` and signs `acli` in. Use `JIRA_PROJECT_KEY` as the default
-project if the user did not name one. If `acli` is unavailable, the user can instead run
-`acli jira auth login --web`, or you can use a Jira MCP server if the environment has one.
-
-Create the epic first (skip if it exists), then each task under it:
-
-```bash
-acli jira workitem create --project PAY --type Epic \
-  --summary "Team workspaces" --description-file docs/epics/<slug>/design.md --json
-
-acli jira workitem create --project PAY --type Task --parent PAY-123 \
-  --summary "Add workspace data model" \
-  --description-file docs/epics/<slug>/tickets/T1.md --json
-```
-
-Read the new key from the command output. If many tickets are needed,
-`acli jira workitem create-bulk --from-json` is also available.
-
-## Step 4 - Record the keys
-
-Write each Jira key next to its task in `plan.md`. The `builder` agent uses these keys in
-branch names, commit messages and merge request titles.
+1. **Check the plan.** Each task in `plan.md` needs a goal, acceptance criteria and a
+   title under 80 characters. Ask the `planner` to fix gaps rather than editing around them.
+2. **Preview:** `jira_sync.py preview docs/epics/<slug>/plan.md`. It prints every summary,
+   in order, with dependencies, and creates nothing.
+3. **Get approval.** Show the preview to the user. Creating tickets is visible to the whole
+   team, so wait for a clear yes.
+4. **Connect.** Follow the `connect-tools` skill. It loads `JIRA_SITE`, `JIRA_EMAIL` and
+   `JIRA_API_TOKEN` from `.env` and signs `acli` in. Use `JIRA_PROJECT_KEY` as the default
+   project if the user did not name one.
+5. **Create:**
+   `jira_sync.py create docs/epics/<slug>/plan.md --project PAY --confirm`.
+   Add `--task-type Story` (or another type) if the project does not use `Task`.
+   If the plan already has an `Epic Jira` key, the script uses it instead of creating one.
+6. **Tell the user** which keys were created. The `builder` uses them in branch names,
+   commits and MR titles.
 
 ## Fallback
 
-If Jira cannot be reached, write all tickets to `docs/epics/<slug>/tickets.md` in a format
-that is easy to paste into Jira, and tell the user plainly that nothing was created.
+If `acli` is missing or Jira cannot be reached, run
+`jira_sync.py export-markdown docs/epics/<slug>/plan.md`. It writes
+`docs/epics/<slug>/tickets.md`, ready to paste into Jira, and marks the tasks `Jira: none`.
+Tell the user plainly that no tickets were created.
+
+## If the script fails
+
+Read its error, fix the cause (usually sign-in, project key or an invalid plan) and run the
+same command again. Do not create tickets by typing `acli` commands yourself; that is how
+duplicates and inconsistent tickets happen.

@@ -1,0 +1,112 @@
+import json
+from pathlib import Path
+
+import env_status
+import feature
+import pytest
+from conftest import git
+
+
+def test_detect_python_uv_project(tmp_path: Path) -> None:
+    (tmp_path / "pyproject.toml").write_text(
+        '[tool.ruff]\nline-length = 100\n[dependency-groups]\ndev = ["pytest"]\n'
+    )
+    (tmp_path / "uv.lock").write_text("name = 'pytest'\n")
+    found = feature.detect(tmp_path)
+    assert found["test"] == ["uv", "run", "pytest", "-q"]
+    assert found["lint"] == ["uvx", "ruff", "check", "."]  # ruff configured, not installed
+
+
+def test_detect_python_uses_project_ruff_when_locked(tmp_path: Path) -> None:
+    (tmp_path / "pyproject.toml").write_text("[tool.ruff]\n")
+    (tmp_path / "uv.lock").write_text("name = 'ruff'\n")
+    assert feature.detect(tmp_path)["lint"] == ["uv", "run", "ruff", "check", "."]
+
+
+def test_detect_node_ignores_placeholder_test_script(tmp_path: Path) -> None:
+    scripts = {"test": 'echo "Error: no test specified" && exit 1', "lint": "eslint ."}
+    (tmp_path / "package.json").write_text(json.dumps({"scripts": scripts}))
+    (tmp_path / "pnpm-lock.yaml").write_text("")
+    found = feature.detect(tmp_path)
+    assert found["test"] is None and found["lint"] == ["pnpm", "run", "lint"]
+
+
+@pytest.mark.parametrize(
+    ("marker", "language"), [("go.mod", "go"), ("Cargo.toml", "rust"), ("nothing", "unknown")]
+)
+def test_detect_other_languages(tmp_path: Path, marker: str, language: str) -> None:
+    (tmp_path / marker).write_text("")
+    assert feature.detect(tmp_path)["language"] == language
+
+
+def test_detect_makefile_targets(tmp_path: Path) -> None:
+    (tmp_path / "Makefile").write_text("test:\n\techo hi\n")
+    found = feature.detect(tmp_path)
+    assert found["test"] == ["make", "test"] and found["lint"] is None
+
+
+def test_branch_name_is_deterministic() -> None:
+    assert feature.branch_name("Add due dates!", "PAY-9") == "feature/PAY-9-add-due-dates"
+    assert feature.branch_name("Add due dates!") == "feature/add-due-dates"
+    with pytest.raises(ValueError):
+        feature.branch_name("???")
+
+
+def test_create_branch_dry_run_and_real(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    git(tmp_path, "init", "-q", "-b", "main")
+    (tmp_path / "a").write_text("a")
+    git(tmp_path, "add", "-A")
+    git(tmp_path, "commit", "-q", "-m", "init")
+    monkeypatch.chdir(tmp_path)
+    assert feature.create_branch("Add due dates", dry_run=True) == "feature/add-due-dates"
+    assert git(tmp_path, "branch", "--show-current") == "main"
+    feature.create_branch("Add due dates")
+    assert git(tmp_path, "branch", "--show-current") == "feature/add-due-dates"
+    with pytest.raises(RuntimeError):
+        feature.create_branch("Add due dates")  # already exists
+
+
+def test_check_reports_pass_fail_and_not_run(tmp_path: Path) -> None:
+    (tmp_path / "Makefile").write_text("test:\n\t@echo ok\n")
+    report, code = feature.run_checks(tmp_path)
+    assert code == 0
+    assert [r["status"] for r in report["results"]] == ["passed", "not-run"]
+
+    (tmp_path / "Makefile").write_text("test:\n\t@echo broken; exit 3\n")
+    report, code = feature.run_checks(tmp_path)
+    assert code == 1 and report["results"][0]["status"] == "failed"
+    assert report["results"][0]["exit_code"] != 0  # make reports its own code, not the recipe's
+    assert "broken" in report["results"][0]["output_tail"]
+
+
+def test_check_never_claims_success_when_tests_cannot_run(tmp_path: Path) -> None:
+    report, code = feature.run_checks(tmp_path)  # empty project
+    assert code == 4
+    assert all(r["status"] == "not-run" for r in report["results"])
+
+
+def test_env_status_reports_names_never_secrets(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    env = tmp_path / ".env"
+    env.write_text(
+        "# comment\nGH_TOKEN=ghp_SECRETVALUE123\nGITLAB_TOKEN=\nJIRA_SITE='acme.atlassian.net'\n"
+        "JIRA_EMAIL=me@acme.com\nJIRA_API_TOKEN=\nJIRA_PROJECT_KEY=PAY\n"
+    )
+    assert env_status.main(["--env", str(env)]) == 0
+    out = capsys.readouterr().out
+    assert "SECRETVALUE" not in out and "me@acme.com" not in out
+    report = json.loads(out)
+    assert report["tools"]["github"]["ready"] is True
+    assert report["tools"]["gitlab"] == {"ready": False, "missing": ["GITLAB_TOKEN"]}
+    assert report["tools"]["jira"]["missing"] == ["JIRA_API_TOKEN"]
+    assert report["values"] == {"JIRA_PROJECT_KEY": "PAY"}
+
+
+def test_env_status_require_and_missing_file(tmp_path: Path) -> None:
+    env = tmp_path / ".env"
+    env.write_text("GH_TOKEN=x\n")
+    assert env_status.main(["--env", str(env), "--require", "github"]) == 0
+    assert env_status.main(["--env", str(env), "--require", "github,jira"]) == 1
+    assert env_status.main(["--env", str(env), "--require", "bitbucket"]) == 2
+    assert env_status.main(["--env", str(tmp_path / "missing")]) == 2

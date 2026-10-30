@@ -49,13 +49,30 @@ flowchart TD
 | `triage-adverse-events` | Prioritizes adverse event reports |
 | `review-literature` | Synthesizes provided papers into a cited brief |
 
+## Consistent by design
+
+Anything that must work the same every time is a **Python script**, not prose the AI can
+reinterpret. Each skill's `SKILL.md` tells the agent *when* to run a script; the script does
+the work.
+
+| Skill | Script | What it makes deterministic |
+| --- | --- | --- |
+| `start-task` | `epic.py` | Epic folder and slug, design approval, plan validation, "what runs next" |
+| `implement-feature` | `feature.py` | Test and lint detection, branch names, pass or fail (never "assumed passed") |
+| `jira-tickets` | `jira_sync.py` | Ticket order and content, `--confirm` gate, resume without duplicates |
+| `stacked-mrs` | `stack.py` | Task order, 300-line diff cap, commit messages, `--confirm` gate to publish |
+| `connect-tools` | `env_status.py` | Which credentials are set, by name only |
+
+The scripts need only **Python 3.10 or newer** (standard library, no packages). The agent's
+judgment stays where it belongs: designing, splitting work and writing code.
+
 ## Install
 
 ```bash
 brew install apm                         # once per machine
 
 apm install rutansh/agent-hub            # everything
-apm install rutansh/agent-hub#v0.3.0     # pinned to a release
+apm install rutansh/agent-hub#v0.4.0     # pinned to a release
 
 # only some skills (agents always come with it)
 apm install rutansh/agent-hub --skill start-task --skill implement-feature
@@ -123,8 +140,12 @@ agent-hub/
   .env.example          # credentials template (copy to .env)
   .apm/
     agents/   architect, planner, builder
-    skills/   start-task, implement-feature, jira-tickets, stacked-mrs, + pharma skills
+    skills/   start-task, implement-feature, jira-tickets, stacked-mrs, connect-tools,
+              + pharma skills   (each workflow skill has a scripts/ folder)
+  shared/planlib.py     # plan.md parser; copied into the skills that need it
+  tests/                # pytest suite for the scripts (not installed into projects)
   docs/presentation.html
-  scripts/validate.sh
+  scripts/validate.sh   # structure, secrets and shared-code checks
+  scripts/sync-shared.sh
   .github/workflows/validate.yml
 ```

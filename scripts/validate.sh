@@ -57,4 +57,24 @@ if ! cmp -s .env.example .apm/skills/connect-tools/env.example; then
 fi
 [[ $status -eq 0 ]] && echo "OK   secrets"
 
+# --- Shared code -----------------------------------------------------------
+# Skills ship a copy of shared/planlib.py so each one is self-contained.
+# Run ./scripts/sync-shared.sh after editing the canonical file.
+shared_ok=1
+for skill in start-task jira-tickets stacked-mrs; do
+  if ! cmp -s shared/planlib.py ".apm/skills/$skill/scripts/planlib.py"; then
+    echo "FAIL shared: .apm/skills/$skill/scripts/planlib.py differs (run scripts/sync-shared.sh)"
+    status=1; shared_ok=0
+  fi
+done
+# Every script must at least parse (catches syntax errors; writes no files)
+if ! python3 -c '
+import ast, pathlib
+for path in [*pathlib.Path(".apm/skills").rglob("*.py"), *pathlib.Path("shared").glob("*.py")]:
+    ast.parse(path.read_text(), str(path))
+'; then
+  echo "FAIL scripts: a Python script does not parse"; status=1; shared_ok=0
+fi
+[[ $shared_ok -eq 1 ]] && echo "OK   scripts"
+
 exit $status

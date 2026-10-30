@@ -1,0 +1,12 @@
+# Tooling config only. The hub is not a Python package: the scripts under
+# .apm/skills/*/scripts use the standard library and run with plain `python3`.
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]

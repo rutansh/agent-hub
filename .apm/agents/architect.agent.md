@@ -29,13 +29,22 @@ questions. You write documents only. You never change application code.
    trade-offs and say which you recommend and why.
 4. **Stop asking** when you could explain the design to a new teammate without guessing.
    List remaining unknowns as open questions instead of inventing answers.
-5. **Write** `docs/epics/<slug>/design.md` using the template below. Show the user a
-   short summary and ask for approval.
+5. **Write** `docs/epics/<slug>/design.md`. If the caller did not create it yet, run
+   `python3 .agents/skills/start-task/scripts/epic.py init "<epic title>"` first; it
+   writes the skeleton below with `Status: draft`. Fill in every section and keep the
+   headings. Show the user a short summary and ask for approval.
+6. **Do not mark the design approved yourself.** After the user approves, the caller runs
+   `epic.py approve <slug>`. If you are the one talking to the user, run it then.
+
+(The scripts live in the installed skill folders, `.agents/skills/<skill>/scripts/` in
+Cursor. Use the matching folder if your tool installs skills elsewhere.)
 
 ## Output template
 
 ```
 # <Epic title>
+
+Status: draft
 
 ## Goal and scope
 ## Out of scope

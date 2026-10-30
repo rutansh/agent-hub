@@ -26,6 +26,22 @@ context that does a phase of work and may use skills.
 3. Body: when to use it, numbered steps, output format, boundaries.
 4. Extra files (examples, templates) go in the same folder.
 
+## Make a skill deterministic
+
+If a step must behave the same every time (naming, ordering, limits, approval gates,
+parsing), put it in a script, not in prose:
+
+- Put it in `.apm/skills/<skill-name>/scripts/`, in Python 3.10+ using only the standard
+  library, so it runs anywhere without installs.
+- Refuse unsafe actions in code (for example `--confirm` before anything visible to the
+  team) and exit non-zero with a clear message.
+- Print JSON for results the agent must act on.
+- Have `SKILL.md` say when to run it and what each exit code means.
+- Add tests in `tests/` (they stay out of installs). Use fake `acli`, `gh` and `glab`
+  scripts on `PATH`; never call real services in tests.
+- Code shared by several skills lives in `shared/` and is copied into each skill with
+  `./scripts/sync-shared.sh`. Never edit the copies by hand (CI checks they match).
+
 ## Add an agent
 
 1. Create `.apm/agents/<agent-name>.agent.md`:
@@ -50,9 +66,11 @@ context that does a phase of work and may use skills.
 
 ```bash
 ./scripts/validate.sh
+uv run --no-project --with pytest pytest -q     # or: python -m pytest -q
+uvx ruff check . && uvx ruff format --check .
 ```
 
-Open a PR to `main`. CI runs the same check.
+Open a PR to `main`. CI runs the same checks.
 
 ## Rules
 
@@ -69,7 +87,7 @@ Open a PR to `main`. CI runs the same check.
 After merging, bump `version` in `apm.yml` and tag it:
 
 ```bash
-git tag v0.3.0 && git push origin v0.3.0
+git tag v0.4.0 && git push origin v0.4.0
 ```
 
 Projects then upgrade by changing the ref in their `apm.yml` and running `apm install --update`.

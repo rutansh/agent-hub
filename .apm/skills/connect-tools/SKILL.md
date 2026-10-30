@@ -23,7 +23,17 @@ read aloud, printed or committed.
    | PRs on GitHub | `GH_TOKEN` |
    | Jira tickets | `JIRA_SITE`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, `JIRA_PROJECT_KEY` |
 
-## Step 2 - Load and check
+## Step 2 - Check what is filled in
+
+Run `python3 <this-skill-folder>/scripts/env_status.py`. It reports, per tool (GitHub,
+GitLab, Jira), whether the required variables are set. It names variables only and never
+prints a secret (it shows the value of `JIRA_PROJECT_KEY` only, which is not secret).
+
+To fail early, add `--require`, for example `--require jira,gitlab`. Exit code 1 means a
+required tool is not ready, and 2 means there is no `.env`. Tell the user which variables
+to fill in.
+
+## Step 3 - Load and sign in
 
 From the project root, run the script that sits next to this file. It must be **sourced**
 so the variables stay in the shell:
