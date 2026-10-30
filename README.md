@@ -53,10 +53,9 @@ flowchart TD
 
 ```bash
 brew install apm                         # once per machine
-gh auth login                            # this repo is private
 
 apm install rutansh/agent-hub            # everything
-apm install rutansh/agent-hub#v0.2.0     # pinned to a release
+apm install rutansh/agent-hub#v0.3.0     # pinned to a release
 
 # only some skills (agents always come with it)
 apm install rutansh/agent-hub --skill start-task --skill implement-feature
