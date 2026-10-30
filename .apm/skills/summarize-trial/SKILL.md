@@ -1,5 +1,5 @@
 ---
-name: clinical-trial-summary
+name: summarize-trial
 description: Summarize a clinical trial record into a structured, plain-language brief. Use when the user shares a trial protocol, ClinicalTrials.gov entry, or results text and wants a digest.
 ---
 

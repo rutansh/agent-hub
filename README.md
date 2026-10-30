@@ -1,52 +1,95 @@
-# ai4pharma-skills
+# agent-hub
 
-Central repository of shared agent skills for AI4Pharma, distributed with
-[APM (Agent Package Manager)](https://microsoft.github.io/apm/).
+One place for the team's shared AI **agents** and **skills**. Install them into any
+repo with one command, and everyone works the same way.
 
-Developers publish skills here once; teammates install them into any project with
-one command.
-
-## Available skills
-
-| Skill | Purpose |
-| --- | --- |
-| `clinical-trial-summary` | Structured, plain-language brief of a clinical trial record |
-| `adverse-event-triage` | Prioritize AE reports by seriousness and expectedness |
-| `literature-review-brief` | Citation-backed synthesis of provided papers |
-
-## Use these skills in a project
+## The idea in 30 seconds
 
 ```bash
-# Install APM once
-brew install apm
-
-# In your project: add everything
-apm install rutansh/ai4pharma-skills
-
-# ...or only what you need
-apm install rutansh/ai4pharma-skills --skill clinical-trial-summary
-
-# Pin to a release
-apm install rutansh/ai4pharma-skills#v0.1.0
+apm install rutansh/agent-hub
 ```
 
-APM records the dependency in your `apm.yml`, pins the exact commit in
-`apm.lock.yaml`, and deploys the skills into the agent harness directories it
-detects (Cursor, Claude, Copilot, ...). Pass `--target cursor` if no harness is
-detected yet.
+Then tell your coding agent: **"use start-task"**. It asks whether your work is a small
+feature or a big epic and does the rest.
 
-## Contribute a skill
+```mermaid
+flowchart TD
+    A[start-task] --> B{Small feature or big epic?}
+    B -->|Small| C[implement-feature<br/>read repo, code, test]
+    C --> D[stacked-mrs<br/>1 MR]
+    B -->|Epic| E[architect agent<br/>asks design questions<br/>writes design.md]
+    E --> F[planner agent<br/>splits into tasks<br/>creates Jira tickets]
+    F --> G[builder agent<br/>implements each task]
+    G --> H[stacked-mrs<br/>stack of MRs]
+```
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md). In short: add
-`skills/<name>/SKILL.md`, run `./scripts/validate.sh`, open a PR.
+## Agents (roles)
+
+| Agent | Does one thing |
+| --- | --- |
+| `architect` | Interviews you about the design, then writes `design.md` |
+| `planner` | Splits the design into small tasks and creates the Jira tickets |
+| `builder` | Implements the tasks and opens a stack of merge requests |
+
+## Skills (tasks)
+
+| Skill | Does one thing |
+| --- | --- |
+| `start-task` | Entry point. Asks small vs epic, then routes the work |
+| `implement-feature` | Builds a small feature using the repo's code as context |
+| `jira-tickets` | Creates a Jira epic and child tickets |
+| `stacked-mrs` | Ships work as a stack of small, dependent merge requests |
+
+### Pharma skills (domain examples)
+
+| Skill | Does one thing |
+| --- | --- |
+| `summarize-trial` | Turns a clinical trial record into a structured brief |
+| `triage-adverse-events` | Prioritizes adverse event reports |
+| `review-literature` | Synthesizes provided papers into a cited brief |
+
+## Install
+
+```bash
+brew install apm                         # once per machine
+gh auth login                            # this repo is private
+
+apm install rutansh/agent-hub            # everything
+apm install rutansh/agent-hub#v0.2.0     # pinned to a release
+
+# only some skills (agents always come with it)
+apm install rutansh/agent-hub --skill start-task --skill implement-feature
+```
+
+Files land in `.cursor/agents/` and `.agents/skills/`. For other tools, add a target,
+for example `--target claude` or `--target copilot`.
+
+Upgrade: change the ref in `apm.yml`, then `apm install --update`.
+
+## Needed for the epic workflow
+
+| Tool | Used for | Setup |
+| --- | --- | --- |
+| `glab` | Stacked MRs on GitLab | `brew install glab && glab auth login` |
+| `gh` | Chained PRs on GitHub | `brew install gh && gh auth login` |
+| `acli` | Creating Jira tickets | Install Atlassian CLI, then `acli jira auth login --web` |
+
+If a tool is missing, the agents say so and use a fallback (for example writing tickets
+to a markdown file) instead of failing silently.
+
+## Contribute
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md). Add a file under `.apm/`, run
+`./scripts/validate.sh`, open a PR.
 
 ## Layout
 
 ```
-ai4pharma-skills/
+agent-hub/
   apm.yml
-  skills/
-    <skill-name>/SKILL.md
+  .apm/
+    agents/   architect, planner, builder
+    skills/   start-task, implement-feature, jira-tickets, stacked-mrs, + pharma skills
   scripts/validate.sh
   .github/workflows/validate.yml
 ```

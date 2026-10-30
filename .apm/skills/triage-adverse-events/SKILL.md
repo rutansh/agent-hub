@@ -1,5 +1,5 @@
 ---
-name: adverse-event-triage
+name: triage-adverse-events
 description: Triage adverse event reports by seriousness and expectedness and flag cases needing expedited review. Use when the user shares AE narratives, case reports, or safety listings.
 ---
 

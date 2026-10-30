@@ -1,5 +1,5 @@
 ---
-name: literature-review-brief
+name: review-literature
 description: Produce a concise, citation-backed literature review brief on a drug, target, or indication from provided papers. Use when the user supplies abstracts or papers and asks for a synthesis.
 ---
 
