@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>agent-hub: shared AI agents for every repo</title>
+<style>
+  :root {
+    --bg1: #0b1020; --bg2: #161d3a; --text: #e8ecf8; --muted: #9aa6cf;
+    --card: #1a2142; --line: #2f3b73; --teal: #2dd4bf; --violet: #a78bfa;
+    --amber: #fbbf24; --rose: #fb7185; --green: #4ade80;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; background: #05070f; color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  #stage { position: absolute; left: 50%; top: 50%; width: 1280px; height: 720px;
+    transform-origin: center center; background: linear-gradient(135deg, var(--bg1), var(--bg2));
+    overflow: hidden; box-shadow: 0 0 80px rgba(0,0,0,.6); }
+  .slide { position: absolute; inset: 0; padding: 58px 78px 70px; display: none; flex-direction: column; }
+  .slide.active { display: flex; animation: in .35s ease; }
+  @keyframes in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .slide.active { animation: none; } #bar { transition: none; } }
+
+  h1 { font-size: 64px; line-height: 1.08; letter-spacing: -1px; }
+  h2 { font-size: 40px; line-height: 1.15; margin-bottom: 26px; letter-spacing: -.5px; }
+  h2 small { display: block; font-size: 18px; font-weight: 500; color: var(--teal);
+    text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; }
+  h3 { font-size: 24px; margin-bottom: 8px; }
+  p, li { font-size: 24px; line-height: 1.45; }
+  ul { list-style: none; }
+  li { margin: 10px 0; padding-left: 30px; position: relative; }
+  li::before { content: ""; position: absolute; left: 0; top: .62em; width: 12px; height: 12px;
+    border-radius: 4px; background: var(--teal); }
+  li.bad::before { background: var(--rose); } li.warn::before { background: var(--amber); }
+  li.ok::before { background: var(--green); }
+  .muted { color: var(--muted); } .teal { color: var(--teal); } .violet { color: var(--violet); }
+  .amber { color: var(--amber); } .rose { color: var(--rose); } .green { color: var(--green); }
+  code, .mono { font-family: "SF Mono", Menlo, Consolas, monospace; }
+  code { background: #0d1330; border: 1px solid var(--line); padding: 1px 8px; border-radius: 6px;
+    font-size: .86em; color: #c7d2fe; }
+  pre { background: #0a0f26; border: 1px solid var(--line); border-radius: 14px; padding: 18px 24px;
+    font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 21px; line-height: 1.55; color: #c7d2fe; }
+  pre .c { color: #7482b5; } pre .g { color: var(--green); } pre .t { color: var(--teal); }
+
+  .center { justify-content: center; } .grow { flex: 1; }
+  .row { display: flex; gap: 22px; align-items: stretch; }
+  .row.mid { align-items: center; }
+  .col { flex: 1; min-width: 0; }
+  .card { background: var(--card); border: 2px solid var(--line); border-radius: 18px; padding: 20px 24px; }
+  .card h3 { font-size: 24px; } .card p, .card li { font-size: 20px; }
+  .card li { margin: 6px 0; padding-left: 24px; } .card li::before { width: 9px; height: 9px; top: .6em; }
+  .card.teal { border-color: var(--teal); } .card.violet { border-color: var(--violet); }
+  .card.amber { border-color: var(--amber); } .card.rose { border-color: var(--rose); }
+  .card.green { border-color: var(--green); }
+  /* Reason: the accent classes double as text colors; cards must only color their border. */
+  .card.teal, .card.violet, .card.amber, .card.rose, .card.green { color: var(--text); }
+  .card.big p { font-size: 23px; }
+  .row.grow > .card p, .row.grow > .card li { font-size: 22px; }
+  .row.grow > .card li { margin: 10px 0; }
+  .tag { display: inline-block; font-size: 15px; font-weight: 700; letter-spacing: 1px;
+    text-transform: uppercase; padding: 3px 12px; border-radius: 999px; background: #0d1330;
+    border: 1px solid var(--line); margin-bottom: 10px; color: var(--teal); }
+  .tag.violet { color: var(--violet); } .tag.amber { color: var(--amber); } .tag.rose { color: var(--rose); }
+
+  .node { background: var(--card); border: 2px solid var(--line); border-radius: 16px;
+    padding: 14px 20px; text-align: center; font-size: 21px; line-height: 1.3; }
+  .node b { display: block; font-size: 23px; }
+  .node span { display: block; font-size: 16px; color: var(--muted); margin-top: 4px; }
+  .node.teal { border-color: var(--teal); } .node.violet { border-color: var(--violet); }
+  .node.amber { border-color: var(--amber); } .node.green { border-color: var(--green); }
+  .arrow { color: #6b7bb8; font-size: 34px; flex: none; text-align: center; }
+  .arrow small { display: block; font-size: 15px; color: var(--muted); }
+  .flow { display: flex; align-items: center; gap: 14px; }
+  .flow .node { flex: 1; }
+  .flow.tight .node { padding: 14px 10px; } .flow.tight .node b { font-size: 20px; white-space: nowrap; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 21px; }
+  th { text-align: left; color: var(--teal); font-size: 16px; text-transform: uppercase;
+    letter-spacing: 1.5px; padding: 8px 14px; border-bottom: 2px solid var(--line); }
+  td { padding: 11px 14px; border-bottom: 1px solid #25305f; vertical-align: top; }
+
+  .foot { position: absolute; left: 78px; right: 78px; bottom: 24px; display: flex;
+    justify-content: space-between; font-size: 15px; color: #66739f; }
+  #bar { position: absolute; left: 0; bottom: 0; height: 5px; background: linear-gradient(90deg, var(--teal), var(--violet));
+    transition: width .3s; }
+  #nav { position: fixed; right: 14px; bottom: 12px; display: flex; gap: 8px; z-index: 5; opacity: .5; }
+  #nav:hover { opacity: 1; }
+  #nav button { background: #1a2142; color: var(--text); border: 1px solid var(--line); border-radius: 8px;
+    width: 40px; height: 34px; font-size: 18px; cursor: pointer; }
+  #hint { position: fixed; left: 14px; bottom: 14px; font-size: 13px; color: #66739f; z-index: 5; }
+  .title-grad { background: linear-gradient(90deg, var(--teal), var(--violet)); -webkit-background-clip: text;
+    background-clip: text; color: transparent; }
+  .stack-mr { display: flex; flex-direction: column; gap: 10px; }
+
+  @media print {
+    @page { size: 1280px 720px; margin: 0; }
+    html, body { overflow: visible; height: auto; background: none; }
+    #stage { position: static; transform: none !important; width: auto; height: auto; box-shadow: none; background: none; }
+    .slide { display: flex !important; position: relative; width: 1280px; height: 720px; page-break-after: always;
+      background: linear-gradient(135deg, var(--bg1), var(--bg2)); animation: none; -webkit-print-color-adjust: exact;
+      print-color-adjust: exact; }
+    #nav, #hint, #bar { display: none; }
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+
+<!-- 1. Title -->
+<section class="slide center">
+  <p class="teal mono" style="font-size:22px;margin-bottom:18px">AI4Pharma &middot; engineering workflow</p>
+  <h1>One team.<br><span class="title-grad">Shared AI agents</span><br>in every repo.</h1>
+  <p class="muted" style="margin-top:30px;font-size:26px">How we designed <b>agent-hub</b>: what it does, why it is built this way,<br>and the practices that keep AI systems safe and useful.</p>
+</section>
+
+<!-- 2. Problem -->
+<section class="slide">
+  <h2><small>The problem</small>AI help is only as consistent as the prompt</h2>
+  <div class="row grow">
+    <div class="col"><ul>
+      <li class="bad">Every developer prompts differently, so results vary</li>
+      <li class="bad">Good prompts live in chats and docs, get copy-pasted, and drift</li>
+      <li class="bad">Big work goes straight to code: no design, one huge merge request</li>
+      <li class="bad">Credentials end up pasted into chat windows</li>
+    </ul></div>
+    <div class="col"><div class="card amber" style="margin-top:14px">
+      <span class="tag amber">What we want</span>
+      <ul>
+        <li>The same proven workflow for everyone</li>
+        <li>Designed first, built in small reviewable pieces</li>
+        <li>Humans approve every visible action</li>
+        <li>Secrets stay on the developer's machine</li>
+      </ul>
+    </div></div>
+  </div>
+</section>
+
+<!-- 3. Idea -->
+<section class="slide">
+  <h2><small>The idea</small>Treat agent behavior like a dependency</h2>
+  <p class="muted" style="margin-bottom:22px">Like npm or pip, but for the instructions that steer coding agents.</p>
+  <pre><span class="c"># in any project, once</span>
+<span class="t">apm install</span> rutansh/agent-hub#v0.3.0
+
+<span class="c"># result: same agents and skills, pinned to an exact commit</span>
+<span class="g">.cursor/agents/</span>   architect  planner  builder
+<span class="g">.agents/skills/</span>   start-task  implement-feature  jira-tickets
+                   stacked-mrs  connect-tools  ...</pre>
+  <div class="row" style="margin-top:24px">
+    <div class="card col"><h3 class="teal">apm.yml</h3><p>The manifest: which package and which version this project uses.</p></div>
+    <div class="card col"><h3 class="violet">apm.lock.yaml</h3><p>The lockfile: exact commit and file hashes, so everyone gets identical content.</p></div>
+  </div>
+</section>
+
+<!-- 4. System at a glance -->
+<section class="slide">
+  <h2><small>System at a glance</small>One hub, many projects</h2>
+  <div class="row mid grow">
+    <div class="node teal" style="width:330px;padding:26px 20px"><b style="font-size:30px">agent-hub</b>
+      <span>3 agents &middot; 8 skills &middot; CI checks<br>tagged releases (v0.3.0)</span></div>
+    <div class="arrow">&rarr;<small>apm install<br>pinned version</small></div>
+    <div class="col" style="display:flex;flex-direction:column;gap:18px">
+      <div class="node violet"><b>todo-app</b><span>basic app &middot; 6 tests</span></div>
+      <div class="node violet"><b>expense-tracker</b><span>basic app &middot; 11 tests</span></div>
+    </div>
+    <div class="arrow">&rarr;</div>
+    <div class="node green" style="width:300px"><b>Your agent</b><span>Cursor reads<br><code>.cursor/agents/</code> and<br><code>.agents/skills/</code></span></div>
+  </div>
+  <p class="muted" style="font-size:20px">Fix or improve a skill once in the hub, release a tag, and every project upgrades with one command.</p>
+</section>
+
+<!-- 5. Three repos -->
+<section class="slide">
+  <h2><small>The three repos</small>Simple names, one job each</h2>
+  <table>
+    <tr><th>Repo</th><th>What it is</th><th>Who touches it</th></tr>
+    <tr><td><b class="teal">agent-hub</b></td><td>The shared agents and skills, plus validation CI and this deck</td><td>Anyone adding a skill or agent (via PR)</td></tr>
+    <tr><td><b class="violet">todo-app</b></td><td>A basic CLI app to practise on. Use it for small features and epics.</td><td>Anyone trying the workflow</td></tr>
+    <tr><td><b class="violet">expense-tracker</b></td><td>A second basic app with a different domain, so the skills are shown to be reusable</td><td>Anyone trying the workflow</td></tr>
+  </table>
+  <p class="muted" style="margin-top:28px">Both apps use <b>both</b> workflows. The repos are not split by workflow, because real projects need both.</p>
+</section>
+
+<!-- 6. Agents vs skills -->
+<section class="slide">
+  <h2><small>Building blocks</small>Skills are tasks. Agents are roles.</h2>
+  <div class="row grow">
+    <div class="col card teal"><span class="tag">Skills (how to do a task)</span>
+      <ul>
+        <li><b>start-task</b>: entry point, asks small or epic</li>
+        <li><b>implement-feature</b>: code a small change with repo context</li>
+        <li><b>jira-tickets</b>: create epic and child tickets</li>
+        <li><b>stacked-mrs</b>: ship a chain of small MRs</li>
+        <li><b>connect-tools</b>: load credentials, check tools</li>
+      </ul>
+      <p class="muted" style="font-size:17px;margin-top:6px">+ 3 pharma examples: summarize-trial, triage-adverse-events, review-literature</p>
+    </div>
+    <div class="col card violet"><span class="tag violet">Agents (who does a phase)</span>
+      <ul>
+        <li><b>architect</b>: interviews you, writes the design</li>
+        <li><b>planner</b>: splits into tasks, creates Jira tickets</li>
+        <li><b>builder</b>: implements tasks, opens stacked MRs</li>
+      </ul>
+      <p class="muted" style="margin-top:14px;font-size:19px">An agent has its own context and boundaries, and may use skills. Names are verbs for skills and role nouns for agents so they are easy to remember.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 7. start-task flow -->
+<section class="slide">
+  <h2><small>The workflow</small>One entry point: <span class="teal">start-task</span></h2>
+  <div class="flow" style="margin-bottom:26px">
+    <div class="node teal"><b>"Use start-task"</b><span>developer describes the work</span></div>
+    <div class="arrow">&rarr;</div>
+    <div class="node amber"><b>Small feature or big epic?</b><span>one question, with definitions</span></div>
+  </div>
+  <div class="row grow">
+    <div class="col card green"><span class="tag" style="color:var(--green)">Small feature</span>
+      <div class="flow" style="flex-direction:column;align-items:stretch;gap:10px;margin-top:6px">
+        <div class="node"><b>implement-feature</b><span>read repo, tests first, code, verify</span></div>
+        <div class="arrow" style="font-size:24px">&darr;</div>
+        <div class="node"><b>1 merge request</b><span>only after you say go</span></div>
+      </div></div>
+    <div class="col card violet" style="flex:2.2"><span class="tag violet">Big epic</span>
+      <div class="flow" style="margin-top:6px">
+        <div class="node"><b>architect</b><span>design.md</span></div><div class="arrow">&rarr;</div>
+        <div class="node"><b>planner</b><span>plan.md + Jira</span></div><div class="arrow">&rarr;</div>
+        <div class="node"><b>builder</b><span>code + tests</span></div><div class="arrow">&rarr;</div>
+        <div class="node"><b>Stack of MRs</b><span>small, in order</span></div>
+      </div>
+      <p class="muted" style="font-size:18px;margin-top:14px">You approve at the end of every phase.</p></div>
+  </div>
+</section>
+
+<!-- 8. Small feature -->
+<section class="slide">
+  <h2><small>Small feature path</small>Understand the code, then change it</h2>
+  <div class="flow tight" style="margin-bottom:28px">
+    <div class="node"><b>1 Understand</b><span>restate the request,<br>max 3 questions</span></div><div class="arrow">&rarr;</div>
+    <div class="node"><b>2 Learn the repo</b><span>README, commands,<br>closest existing feature</span></div><div class="arrow">&rarr;</div>
+    <div class="node"><b>3 Tests first</b><span>watch them fail</span></div><div class="arrow">&rarr;</div>
+    <div class="node"><b>4 Implement</b><span>smallest change,<br>match conventions</span></div><div class="arrow">&rarr;</div>
+    <div class="node green"><b>5 Verify</b><span>tests, lint,<br>re-read the diff</span></div>
+  </div>
+  <div class="row">
+    <div class="card col"><h3 class="teal">Example prompts</h3><ul>
+      <li><code>todo-app</code>: "add due dates to tasks"</li>
+      <li><code>expense-tracker</code>: "add a --category filter to list"</li></ul></div>
+    <div class="card col amber"><h3 class="amber">Guardrails</h3><ul>
+      <li>No unrelated refactors</li>
+      <li>Says so when a check could not run</li>
+      <li>No push without your go-ahead</li></ul></div>
+  </div>
+</section>
+
+<!-- 9. Epic -->
+<section class="slide">
+  <h2><small>Epic path</small>Design, plan, then build</h2>
+  <div class="row grow">
+    <div class="col card big violet"><span class="tag violet">1 architect</span>
+      <p>Reads the repo first. Interviews you in rounds of up to 4 questions: data, interfaces, security, rollout, risks. Offers options with a recommendation.</p>
+      <p class="teal mono" style="margin-top:12px;font-size:17px">&rarr; docs/epics/&lt;slug&gt;/design.md</p></div>
+    <div class="col card big teal"><span class="tag">2 planner</span>
+      <p>Splits the design into tasks that each fit one MR, ordered by dependency. You approve the list, then it creates the Jira epic and child tickets.</p>
+      <p class="teal mono" style="margin-top:12px;font-size:17px">&rarr; plan.md + Jira keys</p></div>
+    <div class="col card big green"><span class="tag" style="color:var(--green)">3 builder</span>
+      <p>Implements each task with tests, saves each as one diff with the Jira key in the message, shows the stack, then pushes after approval.</p>
+      <p class="teal mono" style="margin-top:12px;font-size:17px">&rarr; stack of MRs</p></div>
+  </div>
+  <p class="muted" style="margin-top:18px;font-size:21px">Agents hand work over through <b>files</b>, not chat memory. Each phase can be reviewed, edited and resumed.</p>
+</section>
+
+<!-- 10. Stacked MRs -->
+<section class="slide">
+  <h2><small>Shipping</small>Stacked MRs: small changes, reviewed in order</h2>
+  <div class="row mid">
+    <div class="col stack-mr">
+      <div class="node green"><b>main</b></div>
+      <div class="node"><b>MR 1: data model</b><span>PAY-124 &middot; targets main</span></div>
+      <div class="node"><b>MR 2: API</b><span>PAY-125 &middot; targets MR 1</span></div>
+      <div class="node"><b>MR 3: UI</b><span>PAY-126 &middot; targets MR 2</span></div>
+    </div>
+    <div class="col">
+      <ul>
+        <li>Each diff builds and passes tests on its own</li>
+        <li>Reviewers merge earlier MRs while later ones are still being built</li>
+        <li>Commit format: <code>PAY-124: add data model</code></li>
+      </ul>
+      <table style="margin-top:14px;font-size:19px">
+        <tr><th>Host</th><th>Tool</th></tr>
+        <tr><td>GitLab</td><td><code>glab stack</code> (experimental)</td></tr>
+        <tr><td>GitHub</td><td>chained PRs with <code>gh</code></td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- 11. Credentials -->
+<section class="slide">
+  <h2><small>Credentials</small>Secrets stay on your machine</h2>
+  <div class="row grow">
+    <div class="col"><pre style="font-size:19px"><span class="c"># each developer, once</span>
+cp .env.example .env
+<span class="c"># fill in only the tools you use</span>
+source .agents/skills/\
+  connect-tools/scripts/connect.sh</pre>
+      <table style="margin-top:16px;font-size:18px">
+        <tr><th>Tool</th><th>Variables</th></tr>
+        <tr><td>gh</td><td><code>GH_TOKEN</code></td></tr>
+        <tr><td>glab</td><td><code>GITLAB_TOKEN</code></td></tr>
+        <tr><td>acli</td><td><code>JIRA_*</code> (token via stdin)</td></tr>
+      </table></div>
+    <div class="col card rose"><span class="tag rose">Layers of protection</span>
+      <ul>
+        <li><code>.env</code> is git-ignored</li>
+        <li><code>.cursorignore</code> keeps it out of AI context</li>
+        <li>Agents are told never to read, print or commit it</li>
+        <li>Tokens never go on a command line</li>
+        <li>CI fails if <code>.env</code> is tracked or a token has a value</li>
+        <li>Scoped tokens: <code>repo</code>; <code>api</code> + <code>write_repository</code></li>
+      </ul></div>
+  </div>
+</section>
+
+<!-- 12. Contribute & release -->
+<section class="slide">
+  <h2><small>Governance</small>Instructions are code: review, test, release</h2>
+  <div class="flow" style="margin-bottom:30px">
+    <div class="node"><b>Add a file</b><span>.apm/skills/&lt;name&gt;/SKILL.md<br>.apm/agents/&lt;name&gt;.agent.md</span></div><div class="arrow">&rarr;</div>
+    <div class="node"><b>Pull request</b><span>peer review</span></div><div class="arrow">&rarr;</div>
+    <div class="node amber"><b>CI validate.sh</b><span>names, descriptions,<br>ASCII, secrets</span></div><div class="arrow">&rarr;</div>
+    <div class="node"><b>Tag release</b><span>v0.3.0</span></div><div class="arrow">&rarr;</div>
+    <div class="node green"><b>Projects upgrade</b><span>bump ref,<br><code>apm install --update</code></span></div>
+  </div>
+  <ul>
+    <li>Projects choose when to upgrade, so a bad change never lands everywhere at once</li>
+    <li>The lockfile makes every install reproducible, and a fresh clone gets identical files</li>
+    <li>Every skill and agent must state what it must <b>not</b> do</li>
+  </ul>
+</section>
+
+<!-- 13. Design decisions -->
+<section class="slide">
+  <h2><small>Why it is built this way</small>Key design decisions</h2>
+  <table style="font-size:20px">
+    <tr><th>Decision</th><th>Reason</th></tr>
+    <tr><td><b>APM for distribution</b></td><td>Manifest, lockfile and per-tool deployment already solved; no custom installer</td></tr>
+    <tr><td><b>Split into 3 agents</b></td><td>Design, planning and coding need different context; smaller context, clearer boundaries</td></tr>
+    <tr><td><b>Files as hand-offs</b></td><td>Reviewable, editable, resumable; nothing lives only in chat memory</td></tr>
+    <tr><td><b>Approval gates</b></td><td>Tickets, pushes and MRs are visible to the team, so a human says go</td></tr>
+    <tr><td><b>Fallbacks, not failures</b></td><td>No Jira CLI? Tickets go to a markdown file, and the agent says nothing was created</td></tr>
+    <tr><td><b>Small tasks, stacked MRs</b></td><td>Reviewable diffs are the real bottleneck on AI-written code</td></tr>
+  </table>
+</section>
+
+<!-- 14. Best practices 1 -->
+<section class="slide">
+  <h2><small>Best practices for AI systems (1 of 2)</small>Keep people in control</h2>
+  <div class="row grow">
+    <div class="col card teal"><h3>Approval gates</h3>
+      <p>Anything visible or hard to undo (tickets, pushes, MRs, deletes) needs an explicit human go-ahead.</p></div>
+    <div class="col card amber"><h3>Verify, never trust</h3>
+      <p>Treat agent output as a draft. Tests, linters, CI and code review decide, not the agent's confidence.</p></div>
+    <div class="col card rose"><h3>Least privilege</h3>
+      <p>Personal, scoped, revocable tokens. No secrets in prompts or chat. Keep <code>.env</code> out of context.</p></div>
+  </div>
+  <div class="row" style="margin-top:20px">
+    <div class="col card violet"><h3>Small scope, small blast radius</h3>
+      <p>One task, one diff. Small changes are easy to review and easy to revert.</p></div>
+    <div class="col card green"><h3>Honest reporting</h3>
+      <p>The agent must say when a check did not run or a tool was missing. Never claim success it did not see.</p></div>
+  </div>
+</section>
+
+<!-- 15. Best practices 2 -->
+<section class="slide">
+  <h2><small>Best practices for AI systems (2 of 2)</small>Engineer the instructions and the context</h2>
+  <div class="row grow">
+    <div class="col"><ul>
+      <li><b>Version and pin.</b> Lockfile and tags make behavior reproducible</li>
+      <li><b>Instructions are code.</b> PRs, CI validation, changelog</li>
+      <li><b>Explicit boundaries.</b> Each agent lists what it will not do</li>
+      <li><b>State in files.</b> Design, plan and status survive any chat</li>
+    </ul></div>
+    <div class="col"><ul>
+      <li><b>Context hygiene.</b> Read the repo before asking. Keep agent files short</li>
+      <li><b>Supply chain.</b> A third-party skill is a prompt that runs with your permissions: review and pin it. APM also scans for hidden Unicode</li>
+      <li><b>Data is not instructions.</b> Text in tickets, web pages or files can carry prompt injection</li>
+      <li><b>Measure and iterate.</b> Try on real tasks, note failures, improve the skill</li>
+    </ul></div>
+  </div>
+</section>
+
+<!-- 16. Honest status -->
+<section class="slide">
+  <h2><small>Status</small>What is verified, and what is not yet</h2>
+  <div class="row grow">
+    <div class="col card green"><span class="tag" style="color:var(--green)">Verified</span><ul>
+      <li class="ok">Fresh clone + <code>apm install --frozen</code> reproduces agents and skills</li>
+      <li class="ok">Both apps' tests pass (6 and 11)</li>
+      <li class="ok">Hub CI validates skills, agents and secrets</li>
+      <li class="ok"><code>connect.sh</code> works in bash and zsh</li>
+    </ul></div>
+    <div class="col card amber"><span class="tag amber">Not yet verified</span><ul>
+      <li class="warn">A full agent run on a real epic with live Jira and GitLab</li>
+      <li class="warn">GitHub chained-PR path</li>
+      <li class="warn"><code>glab stack</code> is marked experimental by GitLab</li>
+      <li class="warn"><code>acli</code> and <code>glab</code> login with real tokens</li>
+    </ul></div>
+  </div>
+</section>
+
+<!-- 17. Try it -->
+<section class="slide">
+  <h2><small>Next steps</small>Try it in five minutes</h2>
+  <pre><span class="c"># 1. get the tools</span>
+brew install apm
+<span class="c"># 2. pick an app and install the shared agents</span>
+git clone https://github.com/rutansh/todo-app &amp;&amp; cd todo-app
+apm install &amp;&amp; uv sync &amp;&amp; uv run pytest
+<span class="c"># 3. open in Cursor and say:</span>
+<span class="t">Use start-task. Add due dates to tasks.</span></pre>
+  <div class="row" style="margin-top:22px">
+    <div class="card col"><h3 class="teal">This week</h3><p>Pilot on one real epic with live Jira and GitLab. Note what the agents get wrong.</p></div>
+    <div class="card col"><h3 class="violet">Next</h3><p>Add your team's own skills. Consider an org policy file and an audit step in CI.</p></div>
+  </div>
+</section>
+
+<!-- 18. End -->
+<section class="slide center" style="text-align:center;align-items:center">
+  <h1><span class="title-grad">Questions?</span></h1>
+  <p class="muted" style="margin-top:26px;font-size:28px">github.com/rutansh/agent-hub</p>
+  <p class="muted" style="margin-top:10px;font-size:22px">agent-hub &middot; todo-app &middot; expense-tracker</p>
+</section>
+
+<div id="bar"></div>
+</div>
+
+<div id="hint">&larr; &rarr; navigate &middot; F fullscreen &middot; Print to save as PDF</div>
+<div id="nav"><button id="prev" aria-label="Previous">&larr;</button><button id="next" aria-label="Next">&rarr;</button></div>
+
+<script>
+  const stage = document.getElementById("stage");
+  const slides = [...document.querySelectorAll(".slide")];
+  const bar = document.getElementById("bar");
+  let index = 0;
+
+  function fit() {
+    const scale = Math.min(innerWidth / 1280, innerHeight / 720);
+    stage.style.transform = `translate(-50%, -50%) scale(${scale})`;
+  }
+
+  function show(i) {
+    index = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((s, n) => s.classList.toggle("active", n === index));
+    bar.style.width = `${((index + 1) / slides.length) * 100}%`;
+    history.replaceState(null, "", `#${index + 1}`);
+  }
+
+  function addFooters() {
+    slides.forEach((s, n) => {
+      if (n === 0 || n === slides.length - 1) return;
+      const f = document.createElement("div");
+      f.className = "foot";
+      f.innerHTML = `<span>agent-hub</span><span>${n + 1} / ${slides.length}</span>`;
+      s.appendChild(f);
+    });
+  }
+
+  document.addEventListener("keydown", (e) => {
+    if (["ArrowRight", "PageDown", " ", "Enter"].includes(e.key)) { e.preventDefault(); show(index + 1); }
+    else if (["ArrowLeft", "PageUp", "Backspace"].includes(e.key)) { e.preventDefault(); show(index - 1); }
+    else if (e.key === "Home") show(0);
+    else if (e.key === "End") show(slides.length - 1);
+    else if (e.key.toLowerCase() === "f") {
+      document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+    }
+  });
+  document.getElementById("next").onclick = () => show(index + 1);
+  document.getElementById("prev").onclick = () => show(index - 1);
+  addEventListener("resize", fit);
+
+  addFooters();
+  fit();
+  show((parseInt(location.hash.slice(1), 10) || 1) - 1);
+</script>
+</body>
+</html>

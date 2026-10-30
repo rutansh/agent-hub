@@ -99,6 +99,18 @@ source .agents/skills/connect-tools/scripts/connect.sh
 ships `.gitignore` and `.cursorignore` entries so `.env` is not committed or sent to the AI.
 Treat tokens like passwords: use your own, with the fewest scopes needed.
 
+## Present it
+
+[`docs/presentation.html`](./docs/presentation.html) is an 18-slide deck: the problem, how
+the system is designed, what it does, and best practices for AI systems. Open it in a
+browser. Arrow keys navigate, `F` goes fullscreen, and Print > Save as PDF exports it.
+
+## Try it on a real project
+
+Two basic apps are ready to practise on, each usable for small features and epics:
+[`todo-app`](https://github.com/rutansh/todo-app) and
+[`expense-tracker`](https://github.com/rutansh/expense-tracker).
+
 ## Contribute
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md). Add a file under `.apm/`, run
@@ -113,6 +125,7 @@ agent-hub/
   .apm/
     agents/   architect, planner, builder
     skills/   start-task, implement-feature, jira-tickets, stacked-mrs, + pharma skills
+  docs/presentation.html
   scripts/validate.sh
   .github/workflows/validate.yml
 ```
