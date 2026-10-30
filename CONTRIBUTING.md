@@ -87,7 +87,7 @@ Open a PR to `main`. CI runs the same checks.
 After merging, bump `version` in `apm.yml` and tag it:
 
 ```bash
-git tag v0.4.0 && git push origin v0.4.0
+git tag v0.4.1 && git push origin v0.4.1
 ```
 
 Projects then upgrade by changing the ref in their `apm.yml` and running `apm install --update`.

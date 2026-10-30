@@ -1,6 +1,8 @@
 """Report which credentials are set in .env, by variable name only.
 
 Never prints a secret. The only value shown is JIRA_PROJECT_KEY, which is not secret.
+A variable counts as ready only if it is set, is not a template placeholder, and has a
+plausible format. Problems are reported by variable name and reason, never by value.
 
 Usage:
   env_status.py [--env .env] [--require github,gitlab,jira]
@@ -12,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -35,12 +38,41 @@ def read_env(path: Path) -> dict[str, str]:
     return values
 
 
+_PLACEHOLDER_RE = re.compile(
+    r"^(<.*>|\[.*\]|your[\w .-]*|change[ _-]?me|replace[\w .-]*|x{3,}|todo|\.{3})$",
+    re.IGNORECASE,
+)
+_HOST_RE = re.compile(r"^[a-z0-9-]+(\.[a-z0-9-]+)+$", re.IGNORECASE)
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def invalid_reason(name: str, value: str) -> str | None:
+    """Why a non-empty value cannot be real, or None if it looks usable."""
+    if _PLACEHOLDER_RE.match(value) or "yourcompany" in value.lower():
+        return "still the template placeholder"
+    if name == "JIRA_SITE":
+        host = re.sub(r"^https?://", "", value.strip().rstrip("/"))
+        return None if _HOST_RE.match(host) else "not a hostname"
+    if name == "JIRA_EMAIL" and not _EMAIL_RE.match(value):
+        return "not an email address"
+    return None
+
+
 def tool_status(values: dict[str, str]) -> dict[str, dict]:
-    """For each tool, whether every required variable is set (non-empty)."""
+    """For each tool: every required variable must be set and look real."""
     status = {}
     for tool, names in TOOLS.items():
         missing = [name for name in names if not values.get(name)]
-        status[tool] = {"ready": not missing, "missing": missing}
+        invalid = [
+            {"name": name, "reason": reason}
+            for name in names
+            if values.get(name) and (reason := invalid_reason(name, values[name]))
+        ]
+        status[tool] = {
+            "ready": not missing and not invalid,
+            "missing": missing,
+            "invalid": invalid,
+        }
     return status
 
 

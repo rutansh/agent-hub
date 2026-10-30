@@ -98,7 +98,11 @@ def test_env_status_reports_names_never_secrets(
     assert "SECRETVALUE" not in out and "me@acme.com" not in out
     report = json.loads(out)
     assert report["tools"]["github"]["ready"] is True
-    assert report["tools"]["gitlab"] == {"ready": False, "missing": ["GITLAB_TOKEN"]}
+    assert report["tools"]["gitlab"] == {
+        "ready": False,
+        "missing": ["GITLAB_TOKEN"],
+        "invalid": [],
+    }
     assert report["tools"]["jira"]["missing"] == ["JIRA_API_TOKEN"]
     assert report["values"] == {"JIRA_PROJECT_KEY": "PAY"}
 
@@ -117,3 +121,55 @@ def test_check_output_tail_has_no_ansi_colours(tmp_path: Path) -> None:
     report, _ = feature.run_checks(tmp_path)
     tail = report["results"][0]["output_tail"]
     assert "red" in tail and not any("\x1b" in line for line in tail)
+
+
+def _jira_report(
+    tmp_path: Path, site: str, email: str = "me@acme.com", token: str = "t0k3n"
+) -> dict:
+    env = tmp_path / ".env"
+    env.write_text(f"JIRA_SITE={site}\nJIRA_EMAIL={email}\nJIRA_API_TOKEN={token}\n")
+    return env_status.build_report(env)["tools"]["jira"]
+
+
+def test_template_placeholder_site_is_not_ready(tmp_path: Path) -> None:
+    jira = _jira_report(tmp_path, "yourcompany.atlassian.net")
+    assert jira["ready"] is False and jira["missing"] == []
+    assert jira["invalid"] == [{"name": "JIRA_SITE", "reason": "still the template placeholder"}]
+
+
+def test_real_site_is_ready_with_or_without_scheme(tmp_path: Path) -> None:
+    for site in ("acme.atlassian.net", "https://acme.atlassian.net/"):
+        assert _jira_report(tmp_path, site)["ready"] is True
+
+
+def test_malformed_site_and_email_are_flagged_by_name(tmp_path: Path) -> None:
+    jira = _jira_report(tmp_path, "not a site", email="no-at-sign")
+    assert jira["ready"] is False
+    assert {(i["name"], i["reason"]) for i in jira["invalid"]} == {
+        ("JIRA_SITE", "not a hostname"),
+        ("JIRA_EMAIL", "not an email address"),
+    }
+
+
+def test_placeholder_tokens_are_not_ready_and_never_printed(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    env = tmp_path / ".env"
+    env.write_text("GH_TOKEN=your-token-here\nJIRA_API_TOKEN=<paste token>\n")
+    assert env_status.main(["--env", str(env), "--require", "github"]) == 1
+    out = capsys.readouterr().out
+    assert "your-token-here" not in out and "paste token" not in out
+    report = json.loads(out)
+    assert report["tools"]["github"]["invalid"][0]["name"] == "GH_TOKEN"
+
+
+def test_require_fails_on_placeholder_site(tmp_path: Path) -> None:
+    env = tmp_path / ".env"
+    env.write_text("JIRA_SITE=yourcompany.atlassian.net\nJIRA_EMAIL=a@b.co\nJIRA_API_TOKEN=x\n")
+    assert env_status.main(["--env", str(env), "--require", "jira"]) == 1
+
+
+def test_untouched_template_reports_nothing_ready(tmp_path: Path) -> None:
+    template = Path(__file__).parent.parent / ".env.example"
+    report = env_status.build_report(template)
+    assert not any(tool["ready"] for tool in report["tools"].values())

@@ -29,9 +29,14 @@ Run `python3 <this-skill-folder>/scripts/env_status.py`. It reports, per tool (G
 GitLab, Jira), whether the required variables are set. It names variables only and never
 prints a secret (it shows the value of `JIRA_PROJECT_KEY` only, which is not secret).
 
+A tool is ready only if every variable is set, is not a template placeholder (such as
+`yourcompany.atlassian.net`) and has a plausible format. The report lists `missing`
+variables, and `invalid` ones with a reason (for example `JIRA_SITE: still the template
+placeholder`). Never ask for or repeat the value.
+
 To fail early, add `--require`, for example `--require jira,gitlab`. Exit code 1 means a
 required tool is not ready, and 2 means there is no `.env`. Tell the user which variables
-to fill in.
+to fill in or fix.
 
 ## Step 3 - Load and sign in
 
