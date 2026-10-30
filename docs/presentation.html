@@ -139,12 +139,12 @@
   <h2><small>The idea</small>Treat agent behavior like a dependency</h2>
   <p class="muted" style="margin-bottom:22px">Like npm or pip, but for the instructions that steer coding agents.</p>
   <pre><span class="c"># in any project, once</span>
-<span class="t">apm install</span> rutansh/agent-hub#v0.4.1
+<span class="t">apm install</span> rutansh/agent-hub#v0.5.0
 
 <span class="c"># result: same agents and skills, pinned to an exact commit</span>
 <span class="g">.cursor/agents/</span>   architect  planner  builder
-<span class="g">.agents/skills/</span>   start-task  implement-feature  jira-tickets
-                   stacked-mrs  connect-tools  ...</pre>
+<span class="g">.agents/skills/</span>   start-task  ship-small-feature  implement-feature
+                   jira-tickets  stacked-mrs  connect-tools  ...</pre>
   <div class="row" style="margin-top:24px">
     <div class="card col"><h3 class="teal">apm.yml</h3><p>The manifest: which package and which version this project uses.</p></div>
     <div class="card col"><h3 class="violet">apm.lock.yaml</h3><p>The lockfile: exact commit and file hashes, so everyone gets identical content.</p></div>
@@ -156,7 +156,7 @@
   <h2><small>System at a glance</small>One hub, many projects</h2>
   <div class="row mid grow">
     <div class="node teal" style="width:330px;padding:26px 20px"><b style="font-size:30px">agent-hub</b>
-      <span>3 agents &middot; 5 workflow skills &middot; CI checks<br>tagged releases (v0.4.1)</span></div>
+      <span>3 agents &middot; 6 workflow skills &middot; CI checks<br>tagged releases (v0.5.0)</span></div>
     <div class="arrow">&rarr;<small>apm install<br>pinned version</small></div>
     <div class="col" style="display:flex;flex-direction:column;gap:18px">
       <div class="node violet"><b>todo-app</b><span>web app &middot; 17 tests</span></div>
@@ -187,7 +187,8 @@
     <div class="col card teal"><span class="tag">Skills (how to do a task)</span>
       <ul>
         <li><b>start-task</b>: entry point, asks small or epic</li>
-        <li><b>implement-feature</b>: code a small change with repo context</li>
+        <li><b>ship-small-feature</b>: ticket, branch, test, MR for a small change</li>
+        <li><b>implement-feature</b>: code the change with repo context</li>
         <li><b>jira-tickets</b>: create epic and child tickets</li>
         <li><b>stacked-mrs</b>: ship a chain of small MRs</li>
         <li><b>connect-tools</b>: load credentials, check tools</li>
@@ -215,7 +216,7 @@
   <div class="row grow">
     <div class="col card green"><span class="tag" style="color:var(--green)">Small feature</span>
       <div class="flow" style="flex-direction:column;align-items:stretch;gap:10px;margin-top:6px">
-        <div class="node"><b>implement-feature</b><span>read repo, tests first, code, verify</span></div>
+        <div class="node"><b>ship-small-feature</b><span>Jira ticket, code, test, verify</span></div>
         <div class="arrow" style="font-size:24px">&darr;</div>
         <div class="node"><b>1 merge request</b><span>only after you say go</span></div>
       </div></div>
@@ -232,22 +233,21 @@
 
 <!-- 8. Small feature -->
 <section class="slide">
-  <h2><small>Small feature path</small>Understand the code, then change it</h2>
+  <h2><small>Small feature path</small>Ticket, code, test, merge request</h2>
   <div class="flow tight" style="margin-bottom:28px">
-    <div class="node"><b>1 Understand</b><span>restate the request,<br>max 3 questions</span></div><div class="arrow">&rarr;</div>
-    <div class="node"><b>2 Learn the repo</b><span>README, commands,<br>closest existing feature</span></div><div class="arrow">&rarr;</div>
-    <div class="node"><b>3 Tests first</b><span>watch them fail</span></div><div class="arrow">&rarr;</div>
-    <div class="node"><b>4 Implement</b><span>smallest change,<br>match conventions</span></div><div class="arrow">&rarr;</div>
-    <div class="node green"><b>5 Verify</b><span>tests, lint,<br>re-read the diff</span></div>
+    <div class="node"><b>1 Jira ticket</b><span>use yours, or create one<br>with goal and criteria</span></div><div class="arrow">&rarr;</div>
+    <div class="node"><b>2 Implement</b><span>branch named after the ticket,<br>tests first, smallest change</span></div><div class="arrow">&rarr;</div>
+    <div class="node green"><b>3 Test</b><span>result is recorded;<br>cannot be skipped</span></div><div class="arrow">&rarr;</div>
+    <div class="node"><b>4 Merge request</b><span>preview, you approve,<br>then it opens</span></div>
   </div>
   <div class="row">
     <div class="card col"><h3 class="teal">Example prompts</h3><ul>
       <li><code>todo-app</code>: "add due dates to tasks"</li>
       <li><code>expense-tracker</code>: "add a category filter to the expense list"</li></ul></div>
     <div class="card col amber"><h3 class="amber">Guardrails</h3><ul>
-      <li>No unrelated refactors</li>
-      <li>Says so when a check could not run</li>
-      <li>No push without your go-ahead</li></ul></div>
+      <li>No ticket, no branch</li>
+      <li>No commit or MR unless the tests passed on that exact code</li>
+      <li>No <code>.env</code> commits; no push without your go-ahead</li></ul></div>
   </div>
 </section>
 
@@ -327,7 +327,7 @@ source .agents/skills/\
     <div class="node"><b>Add a file</b><span>.apm/skills/&lt;name&gt;/SKILL.md<br>.apm/agents/&lt;name&gt;.agent.md</span></div><div class="arrow">&rarr;</div>
     <div class="node"><b>Pull request</b><span>peer review</span></div><div class="arrow">&rarr;</div>
     <div class="node amber"><b>CI validate.sh</b><span>names, descriptions,<br>ASCII, secrets</span></div><div class="arrow">&rarr;</div>
-    <div class="node"><b>Tag release</b><span>v0.4.1</span></div><div class="arrow">&rarr;</div>
+    <div class="node"><b>Tag release</b><span>v0.5.0</span></div><div class="arrow">&rarr;</div>
     <div class="node green"><b>Projects upgrade</b><span>bump ref,<br><code>apm install --update</code></span></div>
   </div>
   <ul>
@@ -393,7 +393,7 @@ source .agents/skills/\
   <div class="row grow">
     <div class="col card green"><span class="tag" style="color:var(--green)">Verified</span><ul>
       <li class="ok">Fresh clone + <code>apm install --frozen</code> reproduces agents and skills</li>
-      <li class="ok">Both apps' tests pass (6 and 11)</li>
+      <li class="ok">Both apps' tests pass</li>
       <li class="ok">Hub CI validates skills, agents and secrets</li>
       <li class="ok"><code>connect.sh</code> works in bash and zsh</li>
     </ul></div>

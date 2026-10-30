@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import jira_sync
@@ -115,3 +116,92 @@ def test_export_markdown_fallback_marks_tasks_none(epic_dir: Path) -> None:
     plan = parse_plan((epic_dir / "plan.md").read_text())
     assert [t.jira for t in plan.tasks] == ["none", "none"]
     assert [t.commit_prefix for t in plan.tasks] == ["T1", "T2"]
+
+
+# --- single tickets: `check` and `ticket` (used by the ship-small-feature skill) ---------------
+
+TICKET_ARGS = [
+    "ticket",
+    "--project",
+    "PAY",
+    "--summary",
+    "Delete a task",
+    "--goal",
+    "Users cannot remove tasks they no longer need.",
+    "--criterion",
+    "A task can be deleted from the UI, API and CLI",
+    "--criterion",
+    "Deleted ids are never reused",
+]
+
+
+def test_check_accepts_an_existing_ticket(acli: Path) -> None:
+    assert jira_sync.main(["check", "PAY-7"]) == 0
+    assert "jira workitem view PAY-7" in acli.read_text()
+
+
+def test_check_rejects_a_malformed_key_without_calling_jira(acli: Path) -> None:
+    assert jira_sync.main(["check", "pay7"]) == 2
+    assert not acli.exists()
+
+
+def test_check_fails_when_jira_does_not_know_the_ticket(
+    acli: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("ACLI_FAIL_AT", "101")
+    assert jira_sync.main(["check", "PAY-999"]) == 1
+
+
+def test_single_ticket_description_has_a_fixed_layout() -> None:
+    text = jira_sync.single_ticket_description("Goal here.", ["one", "two"], "Extra detail.")
+    assert text == (
+        "Goal here.\n\nAcceptance criteria:\n- [ ] one\n- [ ] two\n\nDetails:\nExtra detail.\n"
+    )
+    assert jira_sync.single_ticket_description("G", ["a"], "").endswith("- [ ] a\n")
+
+
+def test_ticket_without_confirm_only_previews(
+    acli: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert jira_sync.main(TICKET_ARGS) == 2
+    preview = json.loads(capsys.readouterr().out)
+    assert preview["created"] is False and preview["summary"] == "Delete a task"
+    assert "Deleted ids are never reused" in preview["description"]
+    assert not acli.exists()  # nothing was sent to Jira
+
+
+def test_ticket_with_confirm_creates_it_and_prints_the_key(
+    acli: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert jira_sync.main([*TICKET_ARGS, "--confirm"]) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result == {"created": True, "key": "PAY-101"}
+    call = acli.read_text()
+    assert "workitem create --project PAY --type Task --summary Delete a task" in call
+    assert "--parent" not in call
+
+
+def test_ticket_can_hang_under_an_epic(acli: Path) -> None:
+    assert jira_sync.main([*TICKET_ARGS, "--parent", "PAY-1", "--confirm"]) == 0
+    assert "--parent PAY-1" in acli.read_text()
+
+
+def test_ticket_needs_a_goal(acli: Path) -> None:
+    args = list(TICKET_ARGS)
+    index = args.index("--goal")
+    del args[index : index + 2]
+    assert jira_sync.main([*args, "--confirm"]) == 1
+    assert not acli.exists()
+
+
+def test_ticket_needs_at_least_one_acceptance_criterion(acli: Path) -> None:
+    args = TICKET_ARGS[: TICKET_ARGS.index("--criterion")]
+    assert jira_sync.main([*args, "--confirm"]) == 1
+    assert not acli.exists()
+
+
+def test_ticket_summary_is_limited_to_80_characters(acli: Path) -> None:
+    args = list(TICKET_ARGS)
+    args[args.index("--summary") + 1] = "x" * 81
+    assert jira_sync.main([*args, "--confirm"]) == 1
+    assert not acli.exists()

@@ -2,11 +2,11 @@
 
 Commands (all print JSON):
   detect                      how this project is tested and linted (from its files)
-  branch "<name>" [--ticket PAY-1] [--dry-run]
-                              create feature/<ticket>-<slug> (or just print the name)
   check                       run the detected test and lint commands and report each one
 
-`check` never claims a check passed unless it ran and exited 0. Exit codes:
+`check` never claims a check passed unless it ran and exited 0. It also saves a receipt (inside
+.git, never committed) that ship-small-feature requires before it commits or opens a merge
+request, so "tested" is a recorded fact about the exact code. Exit codes:
   0 all detected checks passed and tests ran, 1 a check failed, 4 tests could not be run.
 """
 
@@ -21,9 +21,10 @@ import subprocess
 import sys
 from pathlib import Path
 
+from receipt import write_receipt
+
 Command = list[str] | None
 _NO_TESTS_NPM = "no test specified"
-MAX_BRANCH_SLUG = 40
 
 
 def _python(root: Path) -> dict:
@@ -78,26 +79,6 @@ def detect(root: Path) -> dict:
     return {"language": "unknown", "test": None, "lint": None}
 
 
-def branch_name(name: str, ticket: str = "") -> str:
-    """Return ``feature/<TICKET-><slug>``."""
-    slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:MAX_BRANCH_SLUG].strip("-")
-    if not slug:
-        raise ValueError("branch name must contain letters or digits")
-    return f"feature/{ticket + '-' if ticket else ''}{slug}"
-
-
-def create_branch(name: str, ticket: str = "", dry_run: bool = False) -> str:
-    """Create the branch from the current HEAD (unless ``dry_run``) and return its name."""
-    branch = branch_name(name, ticket)
-    if not dry_run:
-        result = subprocess.run(
-            ["git", "checkout", "-b", branch], capture_output=True, text=True, check=False
-        )
-        if result.returncode != 0:
-            raise RuntimeError(result.stderr.strip())
-    return branch
-
-
 _ANSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 
 
@@ -144,10 +125,6 @@ def _build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("detect")
     sub.add_parser("check")
-    branch = sub.add_parser("branch")
-    branch.add_argument("name")
-    branch.add_argument("--ticket", default="")
-    branch.add_argument("--dry-run", action="store_true")
     return parser
 
 
@@ -157,10 +134,9 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "detect":
             print(json.dumps(detect(args.root)))
-        elif args.command == "branch":
-            print(json.dumps({"branch": create_branch(args.name, args.ticket, args.dry_run)}))
         else:
             report, code = run_checks(args.root)
+            write_receipt(args.root, code)
             print(json.dumps(report, indent=2))
             return code
     except (ValueError, RuntimeError) as exc:

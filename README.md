@@ -15,8 +15,8 @@ feature or a big epic and does the rest.
 ```mermaid
 flowchart TD
     A[start-task] --> B{Small feature or big epic?}
-    B -->|Small| C[implement-feature<br/>read repo, code, test]
-    C --> D[stacked-mrs<br/>1 MR]
+    B -->|Small| C[ship-small-feature<br/>Jira ticket, code, test, MR]
+    C --> D[1 MR, after approval]
     B -->|Epic| E[architect agent<br/>asks design questions<br/>writes design.md]
     E --> F[planner agent<br/>splits into tasks<br/>creates Jira tickets]
     F --> G[builder agent<br/>implements each task]
@@ -36,8 +36,9 @@ flowchart TD
 | Skill | Does one thing |
 | --- | --- |
 | `start-task` | Entry point. Asks small vs epic, then routes the work |
-| `implement-feature` | Builds a small feature using the repo's code as context |
-| `jira-tickets` | Creates a Jira epic and child tickets |
+| `ship-small-feature` | The whole small-feature flow: Jira ticket, branch, implement, test, merge request |
+| `implement-feature` | The coding step: builds the change using the repo's code as context |
+| `jira-tickets` | Creates a Jira epic and child tickets, or a single ticket |
 | `stacked-mrs` | Ships work as a stack of small, dependent merge requests |
 | `connect-tools` | Loads credentials from `.env` and checks `gh`, `glab` and `acli` |
 
@@ -58,8 +59,9 @@ the work.
 | Skill | Script | What it makes deterministic |
 | --- | --- | --- |
 | `start-task` | `epic.py` | Epic folder and slug, design approval, plan validation, "what runs next" |
-| `implement-feature` | `feature.py` | Test and lint detection, branch names, pass or fail (never "assumed passed") |
-| `jira-tickets` | `jira_sync.py` | Ticket order and content, `--confirm` gate, resume without duplicates |
+| `ship-small-feature` | `ship.py` | Ticket-named branch, `KEY:` commits, no `.env` commits, merge request only after a recorded passing check and approval |
+| `implement-feature` | `feature.py` | Test and lint detection, pass or fail (never "assumed passed"), check receipt |
+| `jira-tickets` | `jira_sync.py` | Ticket order and content, `--confirm` gate, resume without duplicates, single-ticket layout |
 | `stacked-mrs` | `stack.py` | Task order, 300-line diff cap, commit messages, `--confirm` gate to publish |
 | `connect-tools` | `env_status.py` | Which credentials are set, by name only |
 
@@ -72,10 +74,11 @@ judgment stays where it belongs: designing, splitting work and writing code.
 brew install apm                         # once per machine
 
 apm install rutansh/agent-hub            # everything
-apm install rutansh/agent-hub#v0.4.1     # pinned to a release
+apm install rutansh/agent-hub#v0.5.0     # pinned to a release
 
 # only some skills (agents always come with it)
-apm install rutansh/agent-hub --skill start-task --skill implement-feature
+apm install rutansh/agent-hub --skill start-task --skill ship-small-feature \
+  --skill implement-feature --skill jira-tickets --skill connect-tools
 ```
 
 Files land in `.cursor/agents/` and `.agents/skills/`. For other tools, add a target,
@@ -148,9 +151,11 @@ agent-hub/
   .env.example          # credentials template (copy to .env)
   .apm/
     agents/   architect, planner, builder
-    skills/   start-task, implement-feature, jira-tickets, stacked-mrs, connect-tools,
+    skills/   start-task, ship-small-feature, implement-feature, jira-tickets, stacked-mrs,
+              connect-tools,
               + pharma skills   (each workflow skill has a scripts/ folder)
-  shared/planlib.py     # plan.md parser; copied into the skills that need it
+  shared/               # planlib.py (plan parser), receipt.py (check receipt); copied into
+                        # the skills that need them
   tests/                # pytest suite for the scripts (not installed into projects)
   docs/presentation.html
   scripts/validate.sh   # structure, secrets and shared-code checks

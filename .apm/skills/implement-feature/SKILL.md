@@ -1,11 +1,13 @@
 ---
 name: implement-feature
-description: Implement a small feature in the current repo using the existing code as context. Reads conventions first, writes the change with tests, and runs checks.
+description: Write the code for a small feature using the existing code as context. Reads conventions first, writes the change with tests, and runs checks. Part of ship-small-feature.
 ---
 
 # Implement Feature
 
-Use for a change that fits in one merge request.
+Use for the coding and testing part of a change that fits in one merge request. For the
+whole flow (Jira ticket, branch, commit, merge request) use `ship-small-feature`, which calls
+this skill for the coding.
 
 Deterministic steps run through `scripts/feature.py` in this skill's folder:
 `python3 <this-skill-folder>/scripts/feature.py ...` (Python 3.10 or newer, standard
@@ -28,15 +30,16 @@ the code already answers.
 
 ## Step 3 - Implement
 
-1. Create the branch with `feature.py branch "<short name>" [--ticket PAY-123]`. It creates
-   `feature/<ticket>-<name>` the same way every time. Use `--dry-run` to only print it.
+1. Work on the branch you were given (`ship-small-feature` creates it from the Jira key).
+   Do not create branches yourself.
 2. Write or update a test first when the project has tests. Confirm it fails.
 3. Make the smallest change that satisfies the request. No unrelated refactors.
 4. Follow existing conventions over personal preference.
 
 ## Step 4 - Verify
 
-1. Run `feature.py check`. Read the JSON and the exit code:
+1. Run `feature.py check`. It also saves a receipt of the result for these exact files, which
+   `ship.py` requires before it commits. Read the JSON and the exit code:
 
    | Exit code | Meaning | What you do |
    | --- | --- | --- |
@@ -50,7 +53,5 @@ the code already answers.
 ## Step 5 - Hand off
 
 - Summarize what changed and why, with the files touched and the `check` results.
-- If the user wants a merge request, push the branch and open it with `glab mr create`
-  (GitLab) or `gh pr create` (GitHub), after following the `connect-tools` skill. Put the
-  ticket key, a short summary and the `check` results in the description.
-- Do not push or open a merge request without the user's go-ahead.
+- Do not commit, push or open a merge request yourself. `ship-small-feature` does that, with
+  the Jira key and the recorded check result.

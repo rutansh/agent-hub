@@ -4,7 +4,6 @@ from pathlib import Path
 import env_status
 import feature
 import pytest
-from conftest import git
 
 
 def test_detect_python_uv_project(tmp_path: Path) -> None:
@@ -43,27 +42,6 @@ def test_detect_makefile_targets(tmp_path: Path) -> None:
     (tmp_path / "Makefile").write_text("test:\n\techo hi\n")
     found = feature.detect(tmp_path)
     assert found["test"] == ["make", "test"] and found["lint"] is None
-
-
-def test_branch_name_is_deterministic() -> None:
-    assert feature.branch_name("Add due dates!", "PAY-9") == "feature/PAY-9-add-due-dates"
-    assert feature.branch_name("Add due dates!") == "feature/add-due-dates"
-    with pytest.raises(ValueError):
-        feature.branch_name("???")
-
-
-def test_create_branch_dry_run_and_real(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    git(tmp_path, "init", "-q", "-b", "main")
-    (tmp_path / "a").write_text("a")
-    git(tmp_path, "add", "-A")
-    git(tmp_path, "commit", "-q", "-m", "init")
-    monkeypatch.chdir(tmp_path)
-    assert feature.create_branch("Add due dates", dry_run=True) == "feature/add-due-dates"
-    assert git(tmp_path, "branch", "--show-current") == "main"
-    feature.create_branch("Add due dates")
-    assert git(tmp_path, "branch", "--show-current") == "feature/add-due-dates"
-    with pytest.raises(RuntimeError):
-        feature.create_branch("Add due dates")  # already exists
 
 
 def test_check_reports_pass_fail_and_not_run(tmp_path: Path) -> None:

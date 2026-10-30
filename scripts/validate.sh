@@ -58,15 +58,21 @@ fi
 [[ $status -eq 0 ]] && echo "OK   secrets"
 
 # --- Shared code -----------------------------------------------------------
-# Skills ship a copy of shared/planlib.py so each one is self-contained.
-# Run ./scripts/sync-shared.sh after editing the canonical file.
+# Skills ship a copy of each shared module so each one is self-contained.
+# Run ./scripts/sync-shared.sh after editing a file in shared/.
 shared_ok=1
-for skill in start-task jira-tickets stacked-mrs; do
-  if ! cmp -s shared/planlib.py ".apm/skills/$skill/scripts/planlib.py"; then
-    echo "FAIL shared: .apm/skills/$skill/scripts/planlib.py differs (run scripts/sync-shared.sh)"
-    status=1; shared_ok=0
-  fi
-done
+check_copies() {
+  local module=$1; shift
+  for skill in "$@"; do
+    if ! cmp -s "shared/$module.py" ".apm/skills/$skill/scripts/$module.py"; then
+      echo "FAIL shared: .apm/skills/$skill/scripts/$module.py differs (run scripts/sync-shared.sh)"
+      status=1; shared_ok=0
+    fi
+  done
+}
+check_copies planlib start-task jira-tickets stacked-mrs
+check_copies receipt implement-feature ship-small-feature
+
 # Every script must at least parse (catches syntax errors; writes no files)
 if ! python3 -c '
 import ast, pathlib

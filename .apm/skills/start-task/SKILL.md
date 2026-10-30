@@ -32,8 +32,9 @@ Use a multiple-choice question tool if your environment has one.
 
 ## Step 2a - Small feature
 
-Follow the `implement-feature` skill. It reads the repo for context, implements the
-change with tests, and optionally opens one MR.
+Follow the `ship-small-feature` skill, every time. It gets or creates the Jira ticket,
+implements the change on a ticket branch, runs the tests, and opens one merge request after
+the user approves. Do not start coding before the ticket exists.
 
 ## Step 2b - Big epic
 

@@ -1,6 +1,6 @@
 ---
 name: jira-tickets
-description: Create a Jira epic and child tasks from plan.md with a script, so tickets are always created the same way. Falls back to a markdown file if Jira is unavailable.
+description: Create Jira tickets with a script, so they are always created the same way - an epic with child tasks from plan.md, or a single ticket for a small feature. Falls back to a markdown file if Jira is unavailable.
 ---
 
 # Jira Tickets
@@ -38,6 +38,19 @@ library only; it calls the Atlassian CLI `acli`).
    If the plan already has an `Epic Jira` key, the script uses it instead of creating one.
 6. **Tell the user** which keys were created. The `builder` uses them in branch names,
    commits and MR titles.
+
+## A single ticket (small features)
+
+The `ship-small-feature` skill uses two more commands:
+
+- `jira_sync.py check PAY-123` exits 0 if Jira knows the ticket, 1 if not, 2 if the key is
+  malformed.
+- `jira_sync.py ticket --project PAY --summary "..." --goal "..." --criterion "..."` builds a
+  ticket with the same description layout every time (goal, acceptance criteria, optional
+  details). Repeat `--criterion` for each one; `--details`, `--type` and `--parent` are
+  optional. It needs a goal, at least one criterion and a summary of at most 80 characters.
+  Without `--confirm` it only prints the preview and exits 2; show the preview to the user,
+  then run it again with `--confirm`.
 
 ## Fallback
 

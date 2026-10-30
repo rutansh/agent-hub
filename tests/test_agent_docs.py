@@ -5,7 +5,8 @@ from pathlib import Path
 
 import planlib
 
-PLANNER = Path(__file__).parent.parent / ".apm" / "agents" / "planner.agent.md"
+ROOT = Path(__file__).parent.parent
+PLANNER = ROOT / ".apm" / "agents" / "planner.agent.md"
 
 
 def _template() -> str:
@@ -35,3 +36,15 @@ def test_skill_scripts_have_no_shebang() -> None:
     root = Path(__file__).parent.parent / ".apm" / "skills"
     offenders = [p.name for p in root.rglob("*.py") if p.read_text().startswith("#!")]
     assert offenders == []
+
+
+def test_docs_do_not_mention_removed_commands() -> None:
+    # Reason: branch creation moved from feature.py to ship.py; stale docs would send agents to
+    # a command that no longer exists.
+    for path in (ROOT / ".apm").rglob("*.md"):
+        assert "feature.py branch" not in path.read_text(), path
+
+
+def test_small_feature_is_routed_through_the_ship_skill() -> None:
+    start = (ROOT / ".apm" / "skills" / "start-task" / "SKILL.md").read_text()
+    assert "ship-small-feature" in start

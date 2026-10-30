@@ -14,7 +14,14 @@ SKILLS = ROOT / ".apm" / "skills"
 
 # Reason: planlib.py is vendored in several skills; CI proves the copies are identical,
 # so importing any one of them is equivalent.
-for skill in ("start-task", "jira-tickets", "stacked-mrs", "implement-feature", "connect-tools"):
+for skill in (
+    "start-task",
+    "jira-tickets",
+    "stacked-mrs",
+    "implement-feature",
+    "ship-small-feature",
+    "connect-tools",
+):
     sys.path.insert(0, str(SKILLS / skill / "scripts"))
 
 SAMPLE_PLAN = """\
