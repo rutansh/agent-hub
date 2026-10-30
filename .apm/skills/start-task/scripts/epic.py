@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Create and track an epic workspace: docs/epics/<slug>/{design.md, plan.md}.
 
 Commands (all print JSON unless noted):

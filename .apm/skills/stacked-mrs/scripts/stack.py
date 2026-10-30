@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Ship a plan as a stack of small merge requests, with the same rules every time.
 
 Workflow:

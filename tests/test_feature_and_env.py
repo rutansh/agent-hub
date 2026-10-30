@@ -110,3 +110,10 @@ def test_env_status_require_and_missing_file(tmp_path: Path) -> None:
     assert env_status.main(["--env", str(env), "--require", "github,jira"]) == 1
     assert env_status.main(["--env", str(env), "--require", "bitbucket"]) == 2
     assert env_status.main(["--env", str(tmp_path / "missing")]) == 2
+
+
+def test_check_output_tail_has_no_ansi_colours(tmp_path: Path) -> None:
+    (tmp_path / "Makefile").write_text("test:\n\t@printf '\\033[31mred\\033[0m\\n'; exit 1\n")
+    report, _ = feature.run_checks(tmp_path)
+    tail = report["results"][0]["output_tail"]
+    assert "red" in tail and not any("\x1b" in line for line in tail)

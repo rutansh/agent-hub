@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Deterministic helpers for implementing a feature in any repo.
 
 Commands (all print JSON):
@@ -15,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -96,6 +96,9 @@ def create_branch(name: str, ticket: str = "", dry_run: bool = False) -> str:
     return branch
 
 
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+
+
 def _run_check(label: str, command: Command, root: Path) -> dict:
     if command is None:
         return {"check": label, "status": "not-run", "reason": "no command detected"}
@@ -106,7 +109,9 @@ def _run_check(label: str, command: Command, root: Path) -> dict:
             "status": "not-run",
             "reason": f"'{command[0]}' is not installed",
         }
-    result = subprocess.run(command, cwd=root, capture_output=True, text=True)
+    # Reason: tools colour their output on some terminals; the agent reads plain text
+    env = {**os.environ, "NO_COLOR": "1"}
+    result = subprocess.run(command, cwd=root, capture_output=True, text=True, env=env)
     outcome = {
         "check": label,
         "command": command,
@@ -114,7 +119,8 @@ def _run_check(label: str, command: Command, root: Path) -> dict:
         "status": "passed" if result.returncode == 0 else "failed",
     }
     if result.returncode != 0:
-        outcome["output_tail"] = (result.stdout + result.stderr).strip().splitlines()[-15:]
+        text = _ANSI_RE.sub("", result.stdout + result.stderr)
+        outcome["output_tail"] = text.strip().splitlines()[-15:]
     return outcome
 
 

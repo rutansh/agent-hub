@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Report which credentials are set in .env, by variable name only.
 
 Never prints a secret. The only value shown is JIRA_PROJECT_KEY, which is not secret.

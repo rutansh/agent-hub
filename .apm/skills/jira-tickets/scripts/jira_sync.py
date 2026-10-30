@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Turn plan.md into Jira tickets with the Atlassian CLI (acli), deterministically.
 
 Commands:

@@ -27,3 +27,11 @@ def test_planner_template_parses_and_validates() -> None:
 def test_template_placeholders_mean_no_jira_yet() -> None:
     plan = planlib.parse_plan(_template())
     assert all(not task.jira.startswith("PAY") for task in plan.tasks)
+
+
+def test_skill_scripts_have_no_shebang() -> None:
+    """Scripts are run as `python3 script.py`. A shebang on a non-executable file makes
+    linters in consumer repos (which scan .agents/) report EXE001."""
+    root = Path(__file__).parent.parent / ".apm" / "skills"
+    offenders = [p.name for p in root.rglob("*.py") if p.read_text().startswith("#!")]
+    assert offenders == []
