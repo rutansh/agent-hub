@@ -90,7 +90,9 @@ def create_branch(name: str, ticket: str = "", dry_run: bool = False) -> str:
     """Create the branch from the current HEAD (unless ``dry_run``) and return its name."""
     branch = branch_name(name, ticket)
     if not dry_run:
-        result = subprocess.run(["git", "checkout", "-b", branch], capture_output=True, text=True)
+        result = subprocess.run(
+            ["git", "checkout", "-b", branch], capture_output=True, text=True, check=False
+        )
         if result.returncode != 0:
             raise RuntimeError(result.stderr.strip())
     return branch
@@ -111,7 +113,7 @@ def _run_check(label: str, command: Command, root: Path) -> dict:
         }
     # Reason: tools colour their output on some terminals; the agent reads plain text
     env = {**os.environ, "NO_COLOR": "1"}
-    result = subprocess.run(command, cwd=root, capture_output=True, text=True, env=env)
+    result = subprocess.run(command, cwd=root, capture_output=True, text=True, env=env, check=False)
     outcome = {
         "check": label,
         "command": command,
