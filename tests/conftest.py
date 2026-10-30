@@ -44,6 +44,14 @@ SAMPLE_PLAN = """\
 """
 
 
+@pytest.fixture(autouse=True)
+def git_identity(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Scripts under test run `git commit`; CI runners have no git identity configured."""
+    for who in ("AUTHOR", "COMMITTER"):
+        monkeypatch.setenv(f"GIT_{who}_NAME", "Test User")
+        monkeypatch.setenv(f"GIT_{who}_EMAIL", "test@example.com")
+
+
 @pytest.fixture
 def plan_text() -> str:
     return SAMPLE_PLAN
