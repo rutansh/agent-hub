@@ -320,23 +320,6 @@ source .agents/skills/\
   </div>
 </section>
 
-<!-- 12. Contribute & release -->
-<section class="slide">
-  <h2><small>Governance</small>Instructions are code: review, test, release</h2>
-  <div class="flow" style="margin-bottom:30px">
-    <div class="node"><b>Add a file</b><span>.apm/skills/&lt;name&gt;/SKILL.md<br>.apm/agents/&lt;name&gt;.agent.md</span></div><div class="arrow">&rarr;</div>
-    <div class="node"><b>Pull request</b><span>peer review</span></div><div class="arrow">&rarr;</div>
-    <div class="node amber"><b>CI validate.sh</b><span>names, descriptions,<br>ASCII, secrets</span></div><div class="arrow">&rarr;</div>
-    <div class="node"><b>Tag release</b><span>v0.3.0</span></div><div class="arrow">&rarr;</div>
-    <div class="node green"><b>Projects upgrade</b><span>bump ref,<br><code>apm install --update</code></span></div>
-  </div>
-  <ul>
-    <li>Projects choose when to upgrade, so a bad change never lands everywhere at once</li>
-    <li>The lockfile makes every install reproducible, and a fresh clone gets identical files</li>
-    <li>Every skill and agent must state what it must <b>not</b> do</li>
-  </ul>
-</section>
-
 <!-- 13. Design decisions -->
 <section class="slide">
   <h2><small>Why it is built this way</small>Key design decisions</h2>
@@ -346,8 +329,6 @@ source .agents/skills/\
     <tr><td><b>Split into 3 agents</b></td><td>Design, planning and coding need different context; smaller context, clearer boundaries</td></tr>
     <tr><td><b>Files as hand-offs</b></td><td>Reviewable, editable, resumable; nothing lives only in chat memory</td></tr>
     <tr><td><b>Approval gates</b></td><td>Tickets, pushes and MRs are visible to the team, so a human says go</td></tr>
-    <tr><td><b>Fallbacks, not failures</b></td><td>No Jira CLI? Tickets go to a markdown file, and the agent says nothing was created</td></tr>
-    <tr><td><b>Small tasks, stacked MRs</b></td><td>Reviewable diffs are the real bottleneck on AI-written code</td></tr>
   </table>
 </section>
 
